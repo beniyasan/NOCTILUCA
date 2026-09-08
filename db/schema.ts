@@ -1,0 +1,9 @@
+import {sql} from 'drizzle-orm';
+import {sqliteTable,text,integer,primaryKey,index,check} from 'drizzle-orm/sqlite-core';
+export const appMeta=sqliteTable('app_meta',{key:text('key').primaryKey(),value:text('value').notNull()});
+export const players=sqliteTable('players',{id:text('id').primaryKey(),identityKey:text('identity_key').notNull().unique(),createdAt:text('created_at').notNull()});
+export const journeys=sqliteTable('journeys',{playerId:text('player_id').primaryKey().references(()=>players.id,{onDelete:'cascade'}),schemaVersion:integer('schema_version').notNull(),revision:integer('revision').notNull().default(0),stateJson:text('state_json').notNull(),updatedAt:text('updated_at').notNull()},t=>[check('journey_schema',sql`${t.schemaVersion}=1`),check('journey_revision',sql`${t.revision}>=0`),check('journey_json',sql`json_valid(${t.stateJson})`)]);
+export const receipts=sqliteTable('command_receipts',{playerId:text('player_id').notNull().references(()=>players.id,{onDelete:'cascade'}),requestId:text('request_id').notNull(),requestHash:text('request_hash').notNull(),expectedRevision:integer('expected_revision').notNull(),outcomeJson:text('outcome_json').notNull(),createdAt:text('created_at').notNull()},t=>[primaryKey({columns:[t.playerId,t.requestId]}),index('receipts_by_time').on(t.playerId,t.createdAt),check('receipt_json',sql`json_valid(${t.outcomeJson})`)]);
+export const checkpoints=sqliteTable('checkpoints',{playerId:text('player_id').primaryKey().references(()=>players.id,{onDelete:'cascade'}),revision:integer('revision').notNull(),stateJson:text('state_json').notNull(),savedAt:text('saved_at').notNull()},t=>[check('checkpoint_json',sql`json_valid(${t.stateJson})`)]);
+
+export const guards=sqliteTable('transaction_guards',{playerId:text('player_id').primaryKey().references(()=>players.id,{onDelete:'cascade'}),valid:integer('valid').notNull()},t=>[check('guard_valid',sql`${t.valid}=1`)]);

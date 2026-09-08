@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090e18">
+<meta name="description" content="宇宙列車で6つの惑星を巡る。駅の人と話し、ホームの雑談に耳を澄ませる。話さず眺める旅も、そのままに。">
+<title>NOCTILUCA — ここから、また。</title>
+<link rel="stylesheet" href="/client/scene.css">
+<link rel="stylesheet" href="/client/journey.css">
+</head>
+<body>
+<svg class="symbols" aria-hidden="true"><defs>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="2.8"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></symbol>
+<symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM15 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></symbol>
+<symbol id="i-muted" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM16 9l6 6m0-6-6 6"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16m6-14v16"/></symbol>
+<symbol id="i-full" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+<symbol id="i-train" viewBox="0 0 24 24"><path d="M6 18h12M8 21l2-3m6 3-2-3M5 15V5c0-2 14-2 14 0v10l-2 3H7zM5 10h14M12 4v6"/><path d="M8 14h1m6 0h1"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14v11H9l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M6 3h13v18H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm-3 15a3 3 0 0 1 3-3h13M8 3v12m3-7h5m-5 3h4"/></symbol>
+</defs></svg>
+<main class="app" id="app">
+  <div class="window-shell">
+    <section class="window" id="window" aria-label="宇宙列車の車窓">
+      <canvas id="scene" aria-label="多層のドット絵で描かれる宇宙都市の車窓。街並みが右から左へ流れます。">このアプリには Canvas に対応したブラウザが必要です。</canvas>
+      <div class="glass"></div><div class="window-vignette"></div>
+      <div class="window-hud" id="window-hud">
+        <div class="brand"><div class="brand-line"><svg class="brand-mark" viewBox="0 0 24 25" fill="none"><path d="M2 18 12 2l10 16-10 6L2 18Z" stroke="currentColor" stroke-width="1.2"/><path d="m7 18 5-8 5 8M2 18h20" stroke="currentColor" stroke-width="1"/></svg><span class="brand-name">NOCTILUCA</span></div><small>星間夜行 ／ INTERSTELLAR NIGHT TRAIN</small></div>
+        <div class="window-tools"><span class="seat">CARRIAGE 07<br>WINDOW SEAT 04A</span><button class="icon-button book-button" id="open-notebook" aria-label="旅の手帳を開く" aria-haspopup="dialog" title="旅の手帳 (N)"><svg><use href="#i-book"/></svg><span class="book-label">手帳</span><span class="notebook-count" id="notebook-count"></span></button><button class="icon-button" id="capture" aria-label="車窓のポストカードを保存" title="車窓を保存 (P)"><svg><use href="#i-camera"/></svg></button><button class="icon-button" id="fullscreen" aria-label="全画面表示" title="全画面 (F)"><svg><use href="#i-full"/></svg></button><button class="icon-button" id="hide-ui" aria-label="操作パネルを隠して車窓だけにする" title="車窓だけ (H)"><svg><use href="#i-eye"/></svg></button></div>
+        <button class="traveler-chip" id="account-open" aria-haspopup="dialog"><span class="traveler-mark">◇</span><span><strong id="traveler-name">旅人</strong><small id="save-status">接続を確認中</small></span><span class="chip-arrow">↗</span></button>
+        <div class="corner-number">NCL &nbsp; / &nbsp; DEEP SPACE RAILWAY</div>
+        <div class="window-coordinates"><span class="dot"></span><span id="coordinates">SECTOR 09 · ALT 8,400 KM</span></div>
+        <div class="stop-status" id="stop-status" hidden><strong id="stop-name"></strong><small id="stop-phase"></small><button class="talk-open" id="talk-open" aria-haspopup="dialog" hidden title="駅の人と話す (T)"><svg><use href="#i-chat"/></svg>話しかける</button><button class="talk-open platform-button" id="platform-toggle">下車する</button></div>
+        <div class="world-caption" id="weather-label">NEON RAIN / LOCAL 02:17</div>
+      </div>
+      
+      <section class="window-timer" id="timer-overlay" aria-label="タイマーとタスク" hidden>
+      <button type="button" class="window-timer-open" id="timer-overlay-open" aria-haspopup="dialog" aria-describedby="timer-overlay-phase timer-overlay-time timer-overlay-goal" aria-label="タイマーの設定と操作を開く">
+       <span id="timer-overlay-phase" role="status">作業中</span>
+       <strong id="timer-overlay-time" role="timer" aria-live="off">25:00</strong>
+       <span id="timer-overlay-goal" class="timer-goal-display" hidden></span>
+       <span class="window-timer-foot" id="timer-overlay-foot">押してタイマーを操作</span>
+      </button>
+      <div id="timer-tasks" hidden>
+       <ul id="timer-task-list" aria-label="未完了のタスク"></ul>
+       <p id="timer-task-empty">タスクを追加して、ひとつずつ。</p>
+       <details id="timer-task-composer" class="timer-task-composer"><summary id="timer-task-toggle">タスクを追加</summary><form id="timer-task-form"><label for="timer-task-input">タスク内容</label><div class="timer-task-entry"><input id="timer-task-input" type="text" maxlength="120" required autocomplete="off" placeholder="次にやること"><button id="timer-task-add" type="submit">追加</button></div></form></details>
+       <p id="timer-task-message" role="status"></p>
+      </div>
+      </section>
+      <aside class="overheard" id="overheard" aria-label="ホームで聞こえる雑談" hidden>
+       <div class="air-top"><span><svg viewBox="0 0 24 24"><path d="M4 8v8m5-11v14m5-12v10m5-8v6"/></svg><span id="air-place"></span></span><button id="air-hide" aria-label="ホームの雑談を非表示にする" title="雑談を非表示。路線図の設定で戻せます。"><svg><use href="#i-close"/></svg></button></div>
+       <div id="air-lines" aria-live="off"></div>
+       <div class="air-footer"><button id="air-replay" aria-haspopup="dialog">手帳で聞き返す ↗</button></div>
+      </aside>
+      <section class="rail-sheet" id="talk-panel" role="dialog" aria-modal="false" aria-labelledby="talk-title" aria-describedby="talk-subtitle" hidden>
+       <header class="sheet-head">
+        <button class="sheet-back" id="talk-back" hidden>← 話し相手を選ぶ</button>
+        <div class="sheet-eyebrow" id="talk-eyebrow"></div>
+        <h2 id="talk-title"></h2><p id="talk-subtitle"></p>
+        <button class="icon-button sheet-close" id="talk-close" aria-label="会話・手帳を閉じる" title="閉じる (Esc)"><svg><use href="#i-close"/></svg></button>
+       </header>
+       <div class="sheet-body" id="talk-body"></div>
+       <div class="sheet-actions" id="talk-actions"></div>
+       <p class="sheet-footer" id="talk-footer"></p>
+      </section>
+      <div class="announcement" id="announcement" role="status" aria-live="polite"><small>つぎの星へ</small><h2 id="arrival-name"></h2><p id="arrival-en"></p></div>
+    </section>
+  </div>
+  <div class="sill"></div>
+  <footer class="console" id="console">
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+    <div class="destination"><div class="eyebrow">現在の車窓 <b id="world-index">01 / 06</b></div><h1><span id="world-name">ネオン九龍</span><small id="world-en">NEON KOWLOON</small></h1><p class="desc" id="world-description">眠らない街に、今日も青い雨が降る。</p><p class="visit-note" id="visit-note"></p></div>
+    <div class="journey"><div class="journey-head"><span><i class="dot"></i><span id="journey-mode">外縁環状線・自動周遊</span></span><span id="journey-count">1 周目</span></div><div class="rail-map" id="rail-map" aria-label="各都市へ移動"></div><button type="button" class="timer-link" id="timer-open" aria-haspopup="dialog">時間・到着ベル <span id="timer-mini"></span></button><div class="next-label"><span id="next-label">次は 蒼海ドック</span><span id="countdown">02:00</span></div></div>
+    <div class="controls-wrap"><div class="controls">
+      <button class="control play" id="pause" aria-label="一時停止" aria-pressed="false" title="一時停止 / 再生 (Space)"><svg><use href="#i-pause"/></svg></button>
+      <button class="control" id="sound" aria-label="音楽と環境音を設定" aria-haspopup="dialog" title="音楽と環境音"><svg><use href="#i-muted"/></svg></button>
+      <button class="control speed" id="speed" aria-label="速度を変更。現在1倍" title="流れる速さを変更">1.0×</button>
+      <button class="control station-control" id="station-action" aria-pressed="false" title="列車だけ停めてホームを眺める (S)"><svg><use href="#i-train"/></svg><span id="station-action-label">駅で過ごす</span></button>
+      <button class="control map" id="open-map" aria-haspopup="dialog"><svg><use href="#i-map"/></svg><span>路線図</span></button>
+    </div><div class="ledger-actions" aria-label="商売と寄り道"><button id="commerce-open" class="trade-wallet-button" aria-haspopup="dialog">商売帳 <span id="commerce-wallet">120 cr · 荷物 0 / 1</span></button><button id="sidequests-open" class="subtle-button" aria-haspopup="dialog">寄り道の依頼帳</button></div><button id="relay-open" class="subtle-button" aria-haspopup="dialog" hidden>保守端末を調べる</button><p id="chapter-two-observation" class="chapter-two-observation" hidden></p><div class="story-guidance"><p id="story-hint"></p><button id="story-open" class="subtle-button" hidden>最初の帳面を開く</button></div><div class="control-hint"><kbd>T</kbd> 駅で話す　 <kbd>N</kbd> 手帳　 <kbd>H</kbd> 車窓だけ</div></div>
+    <div class="credits">SOMEWHERE, LIFE GOES ON. / 次の便で</div>
+  </footer>
+  <div class="sound-volume" id="sound-volume" hidden><label for="volume">環境音</label><input type="range" id="volume" min="0" max="100" value="35" aria-label="環境音の音量"><span id="volume-value" style="font-size:10px;color:#91b1bc">35%</span></div>
+  <button class="reveal" id="reveal"><svg><use href="#i-eye"/></svg>操作を表示 <span style="opacity:.45">H</span></button>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</main>
+<dialog id="music-dialog" aria-labelledby="music-title">
+ <div class="route-header"><div><div class="eyebrow">SOUND / THE NIGHT TRAIN</div><h2 id="music-title">車窓に流れる音楽</h2></div><button type="button" class="icon-button" id="music-close" aria-label="音楽の設定を閉じる">×</button></div>
+ <div class="music-panel">
+  <label for="music-track">今夜の一曲</label><select id="music-track"></select><p id="music-description"></p>
+  <button type="button" id="music-play">BGMを再生</button><p id="music-status" role="status">曲を選んで、ゆっくりどうぞ。</p>
+  <label class="music-volume">BGMの音量 <input id="music-volume" type="range" min="0" max="100" value="35"><output id="music-level">35%</output></label>
+  <fieldset><legend>列車と街の音</legend><label class="music-check"><input id="ambient-enabled" type="checkbox">列車の響き・雨音を重ねる</label><label class="music-volume">環境音の音量 <input id="ambient-volume" type="range" min="0" max="100" value="35"><output id="ambient-level">35%</output></label></fieldset>
+  <p class="music-help">曲はゆっくり繰り返されます。BGMは別タブでも再生し、車窓や作業タイマーの一時停止とは独立しています。到着ベルは「時間・到着ベル」から調整できます。</p>
+ </div>
+</dialog>
+<dialog id="timer-dialog" aria-labelledby="timer-title">
+ <div class="route-header"><div><div class="eyebrow">WINDOW SEAT / FOCUS</div><h2 id="timer-title">次の駅まで、集中する。</h2></div><button type="button" class="icon-button" id="timer-close" aria-label="時間の設定を閉じる">×</button></div>
+ <div class="timer-panel">
+  <div class="timer-readout"><p id="timer-phase" role="status">ポモドーロ</p><output id="timer-time" aria-label="残り時間">25:00</output><p id="timer-goal-display" class="timer-goal-display" hidden></p><p id="timer-count">このタブで 0 回完了</p></div>
+  <div class="timer-actions"><button type="button" id="timer-start">作業を始める</button><button type="button" id="timer-pause" hidden>一時停止</button><button type="button" id="timer-stop" hidden>終了して旅に戻る</button></div>
+  <p id="timer-message" role="status"></p>
+  <form id="timer-form">
+   <fieldset><legend>普段の駅間時間</legend><label class="auto-label"><input type="checkbox" id="timer-standard" checked>標準の周遊テンポを使う（今までどおり）</label>
+    <div class="timer-fields"><label>発車から到着まで <span><input type="number" id="travel-min" min="0" max="1440" step="1" value="2" required> 分 <input type="number" id="travel-sec" min="0" max="59" step="1" value="0" required> 秒</span></label></div><p class="timer-help">指定時は30秒〜24時間。停車中の時間は含みません。変更は次の発車から適用します。</p>
+   </fieldset>
+   <fieldset><legend>ポモドーロの時間</legend><div class="timer-fields">
+    <label>作業 <span><input type="number" id="focus-min" min="0" max="1440" step="1" value="25" required> 分 <input type="number" id="focus-sec" min="0" max="59" step="1" value="0" required> 秒</span></label>
+    <label>短い休憩 <span><input type="number" id="break-min" min="0" max="1440" step="1" value="5" required> 分 <input type="number" id="break-sec" min="0" max="59" step="1" value="0" required> 秒</span></label>
+    <label>長い休憩 <span><input type="number" id="long-min" min="0" max="1440" step="1" value="15" required> 分 <input type="number" id="long-sec" min="0" max="59" step="1" value="0" required> 秒</span></label>
+    <label>長い休憩の間隔 <span><input type="number" id="long-every" min="1" max="12" step="1" value="4" required> 作業ごと</span></label>
+   </div><p class="timer-help">各5秒〜24時間。作業が終わると次の駅へ到着し、休憩後に自動で発車します。時間の変更は次の区間から適用します。</p></fieldset>
+   <div class="timer-goal-field"><label for="timer-goal">この時間にやりたいこと</label><input id="timer-goal" type="text" maxlength="120" autocomplete="off" placeholder="例：資料の構成を3つ書き出す" aria-describedby="timer-goal-help"><p id="timer-goal-help" class="timer-help">任意・120文字まで。開始すると残り時間の下に表示します。途中で変える場合は、書き直して「設定を保存」を押してください。</p></div>
+   <fieldset><legend>到着ベル</legend><label class="auto-label"><input type="checkbox" id="bell-enabled" checked>各駅への到着を音で知らせる</label><label class="timer-volume">音量 <input type="range" id="bell-volume" min="0" max="100" value="60"><output id="bell-level">60%</output></label><button type="button" id="bell-test">ベルを試聴</button><p class="timer-help">環境音とは別の設定です。音を有効にするため、最初に一度このページをクリックしてください。</p></fieldset>
+   <button type="submit" id="timer-save">設定を保存</button>
+  </form>
+  <p class="timer-help">別タブでも計時します。端末のスリープやブラウザの制限でベルが遅れる場合があります。ページを閉じる・再読み込みするとタイマーは終了します。駅を選んで移動すると作業を中止し、下車や会話では一時停止します。</p>
+ </div>
+</dialog>
+<dialog id="route-dialog" aria-labelledby="route-title">
+ <div class="route-header"><div><div class="eyebrow">INTERSTELLAR LINE · 6 WORLDS</div><h2 id="route-title">今夜は、どの星へ。</h2></div><button class="icon-button" id="close-map" aria-label="路線図を閉じる"><svg><use href="#i-close"/></svg></button></div>
+ <p class="route-intro">旅人のままでも大丈夫。回収船、庭師、湯気の立つ食堂。いつもの景色の中で、それぞれの仕事が続いています。</p>
+ <div class="city-grid" id="city-grid"></div>
+ <div class="route-footer"><label class="auto-label"><input id="auto-tour" type="checkbox" checked>自動で6つの都市をめぐる</label><button type="button" class="revisit-button" id="route-timer-open">時間・到着ベルを設定</button></div>
+
+ <section class="ambient-options" aria-labelledby="ambient-title">
+  <h3 id="ambient-title">窓辺の過ごし方</h3>
+  <label class="auto-label"><input type="checkbox" id="station-stops" checked>各駅に停車する</label>
+  <label class="stay-option">停車時間 <select id="stop-duration"><option value="24" selected>24秒</option><option value="45">45秒</option><option value="90">90秒</option></select></label>
+  <label class="auto-label"><input type="checkbox" id="ambient-hints" checked>車窓のひとことを表示</label>
+  <label class="stay-option">日常の動き <select id="life-density"><option value="normal" selected>いつもどおり</option><option value="quiet">控えめ</option></select></label>
+  <button class="revisit-button" id="revisit">この星をもう一度訪れる</button>
+  <p class="options-note">「駅で過ごす」で列車だけを停車。人や機械の動きは続きます。「発車する」で旅を再開。<br>商売は自分で選んだときだけ。乗車中や不在中にお金は減りません。ログインした旅の会話・手帳・現在地をサーバーに保存します。ゲストはこのページ内だけの記憶です。</p>
+
+  <section class="chat-settings" aria-labelledby="chat-settings-title">
+   <h4 id="chat-settings-title">ホームの声</h4>
+   <label class="auto-label"><input type="checkbox" id="chat-enabled" checked>周囲の雑談を表示</label>
+   <label class="stay-option">会話の間隔 <select id="chat-frequency"><option value="normal">いつもどおり</option><option value="quiet">長めに静かに</option></select></label>
+   <p class="options-note">直接の会話は九龍とスクラップ・ベルトの3人から。周囲の雑談は全6駅にあり、無人駅では機械同士の通信になります。文字での会話です。音声の読み上げはありません。<br>自動周遊では停車時間のあとに発車します。自分で選んだ駅では、列車は待っています。「車窓だけ」では雑談も隠れます。</p>
+   <p class="options-note">旅の名前、保存・再開、バックアップは、右上の「旅の記録」から。</p>
+  </section>
+ </section>
+ <p class="route-keys">T：駅で話す　N：手帳　Esc：会話を閉じる<br>Space：全体を一時停止　S：駅に滞在 / 発車　M：環境音　H：車窓だけ　F：全画面　← / →：前 / 次の都市　P：車窓を保存<br>音は最初はオフ。音のボタンからBGMの選曲・音量・環境音を設定できます。 <button id="show-volume" style="background:none;border:0;color:#a3c9c3;padding:0;text-decoration:underline;cursor:pointer;font-size:inherit">音楽と音量</button></p>
+</dialog>
+
+
+<div class="connection-alert" id="connection-alert" hidden role="status"><span id="connection-text"></span><button id="connection-details">確認する</button></div>
+<div class="runtime-badge" id="runtime-badge" hidden>ローカル確認版 · ChatGPT認証ではありません</div>
+<dialog id="account-dialog" class="account-dialog" aria-labelledby="account-title">
+ <header class="account-head"><div class="eyebrow">THE NEXT DEPARTURE / 旅の記録</div><h2 id="account-title">ここから、また。</h2><button id="account-close" class="icon-button" aria-label="旅の記録を閉じる"><svg><use href="#i-close"/></svg></button></header>
+ <div class="account-body">
+  <section id="signed-out-view">
+   <p class="account-prose">何も買わずに、眺めるだけでも。<br>旅を残したくなったら、名前をつけて。</p>
+   <a id="signin-link" class="primary-link" href="/signin-with-chatgpt">ChatGPTでログイン</a>
+   <button id="guest-continue" class="subtle-button">記録せずに、車窓を眺める</button>
+   <p class="privacy-note">ログインすると、あなたの名前・現在地・会話を記録します。旅の名前は自由に設定でき、アカウントのメールアドレスやプロフィール名は記録に保存しません。</p>
+  </section>
+  <section id="signed-in-view" hidden>
+   <form id="name-form"><label for="player-name">この旅での名前</label><div class="name-entry"><input id="player-name" name="displayName" autocomplete="off" placeholder="旅で呼ばれる名前" required><button class="primary-button" id="name-save" type="submit">名前を保存</button></div><small>1〜20文字。後から変えられます。</small></form>
+   <div class="journey-ticket"><div class="ticket-top"><span>YOUR JOURNEY</span><span id="ticket-number"></span></div><strong id="ticket-place"></strong><p id="ticket-description"></p><div class="ticket-bottom"><span id="ticket-memory"></span><span id="ticket-save"></span></div></div>
+   <button id="save-and-rest" class="primary-button wide">この駅で、保存して中断</button>
+   <p class="field-hint" id="save-hint"></p>
+   <div class="backup-actions"><button id="export-save" class="subtle-button">バックアップを書き出す</button><button id="restore-save" class="subtle-button">バックアップから復元</button></div>
+   <input type="file" id="restore-file" accept="application/json,.json" hidden>
+   <details class="legacy-section"><summary>以前の会話版の記憶を取り込む</summary><p>Phase 2Aの会話メモと面識だけを、新しい旅へ一度取り込めます。開始回数は、会話の完了数や好感度に換算しません。</p><button id="import-local" class="subtle-button">このブラウザの旧記録を取り込む</button><button id="import-file" class="subtle-button">旧記録のJSONを選ぶ</button><input type="file" id="legacy-file" accept="application/json,.json" hidden></details>
+   <div class="reset-section"><button id="reset-open" type="button" class="subtle-button reset-button">セーブデータを初期化する</button><p class="field-hint">名前と音・時間などの設定を残し、旅を最初から始めます。</p></div>
+   <a id="signout-link" class="signout-link" href="/signout-with-chatgpt">ログアウト</a>
+  </section>
+  <section class="save-problem" id="save-problem" hidden><strong>保存を確認できていません</strong><p id="save-problem-message"></p><div><button id="retry-save" class="subtle-button">同じ操作を再試行</button><button id="reload-save" class="subtle-button">サーバーの最新版を読み込む</button></div></section>
+  <p id="account-message" class="account-message" aria-live="polite"></p>
+ </div>
+ <footer class="account-footer">街は、今日もいつもどおり。<br>あなたの旅だけを、ここに残します。</footer>
+</dialog>
+<dialog id="reset-dialog" class="account-dialog" aria-labelledby="reset-title" aria-describedby="reset-description">
+ <header class="account-head"><h2 id="reset-title">この旅を、最初から始めますか？</h2></header>
+ <form id="reset-form" class="account-body">
+  <p id="reset-description" class="account-prose">現在地・所持金・荷物・会話・手帳・本編と依頼の進行・街の変化・未完了タスクを初期化します。九龍から、所持金120 crで再出発します。</p>
+  <p class="account-prose">名前「<span id="reset-name"></span>」と、音・時間・表示の設定は残ります。</p>
+  <p class="field-hint">今の旅を残したい場合は、いったん戻り「バックアップを書き出す」を使ってください。初期化前のバックアップは後から復元できます。</p>
+  <label class="reset-consent"><input id="reset-consent" type="checkbox" required> この旅の進行を消して、最初から始める</label>
+  <p id="reset-error" class="account-message error" role="alert"></p>
+  <div class="backup-actions"><button id="reset-cancel" type="button" class="subtle-button" autofocus>初期化せずに戻る</button><button id="reset-confirm" type="submit" class="primary-button reset-button" disabled>初期化して最初から始める</button></div>
+ </form>
+</dialog>
+<dialog id="resume-dialog" class="account-dialog resume-dialog" aria-labelledby="resume-title">
+ <header class="account-head"><div class="eyebrow">A SMALL CONTINUATION</div><h2 id="resume-title">旅の、つづき。</h2></header>
+ <div class="account-body"><p class="account-prose" id="resume-description"></p><div class="resume-rule"></div><p class="resume-copy">離れていた時間のぶんだけ、<br>何かを失うことはありません。</p><button id="resume-journey" class="primary-button wide">この駅から再開する</button><button id="resume-account" class="subtle-button">記録を確認する</button></div>
+ <footer class="account-footer">NEXT DEPARTURE / NOCTILUCA</footer>
+</dialog>
+<dialog id="commerce-dialog" class="account-dialog commerce-dialog" aria-labelledby="commerce-title"><header class="account-head"><div class="eyebrow">次の便で · 品物と使い手の記録</div><h2 id="commerce-title">商売帳</h2><button id="commerce-close" class="icon-button" aria-label="商売帳を閉じる"><svg><use href="#i-close"/></svg></button></header><div id="commerce-body" class="account-body" aria-live="polite"></div></dialog>
+<noscript>このアプリはJavaScriptを使用します。セーブ機能にはサーバーからの起動が必要です。</noscript>
+<script type="module" src="/client/main.js"></script>
+<dialog id="sidequests-dialog" class="account-dialog commerce-dialog" aria-labelledby="sidequests-title"><header class="account-head"><div class="eyebrow">寄り道の仕事 · 品物と話を運ぶ</div><h2 id="sidequests-title">寄り道の依頼帳</h2><button id="sidequests-close" class="icon-button" aria-label="依頼帳を閉じる">×</button></header><div id="sidequests-body" class="account-body" aria-live="polite"></div></dialog>
+<dialog id="story-dialog" class="story-dialog" aria-labelledby="story-title"><button id="story-dismiss" class="icon-button" aria-label="帳面を閉じる">×</button><p id="story-part" class="eyebrow"></p><h2 id="story-title"></h2><div id="story-lines" aria-live="polite"></div><div id="story-ledger" hidden></div><p id="story-error" role="alert"></p><div class="story-actions"><button id="story-next" class="primary-button">次の行へ</button><button id="story-later" class="subtle-button">あとで読む</button></div></dialog>
+</body></html>
