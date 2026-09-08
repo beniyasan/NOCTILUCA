@@ -15,7 +15,7 @@
 
 ```sh
 git bundle verify archive/noctiluca-sites-history.bundle
-git clone archive/noctiluca-sites-history.bundle ../NOCTILUCA-with-history
+git clone --branch main archive/noctiluca-sites-history.bundle ../NOCTILUCA-with-history
 git -C ../NOCTILUCA-with-history log --oneline
 ```
 
