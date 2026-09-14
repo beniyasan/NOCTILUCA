@@ -1,6 +1,6 @@
 // Durable equipment is read from the save. Short uses of it follow the existing
 // paused scene clock; they never advance a quest or simulate time away.
-const mod=(x,n)=>(x%n+n)%n;
+import {mod} from './anim-utils.js';
 export function createSidequestSceneRenderer({rect,line,ellipse,poly,person}){
  const has=(quests,id,world)=>quests?.[id]?.installed.includes(world);
  const text=(c,s,x,y,color,size=7)=>{c.save();c.fillStyle=color;c.font=size+'px sans-serif';c.fillText(s,x,y);c.restore();};

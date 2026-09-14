@@ -1,5 +1,6 @@
 // Ambient incidents belong to this visit, not to the saved story. Selection is
 // advanced once per visible animation frame; painting has no side effects.
+import {mod,unit,ease,random,momentEvent} from './anim-utils.js';
 export const MOMENTS=[
  {id:'cat_delivery',district:1,anchor:278,duration:17,weight:1},
  {id:'cat_window',district:1,anchor:278,duration:16,weight:1},
@@ -10,10 +11,6 @@ export const MOMENTS=[
  {id:'laundry',district:3,anchor:84,duration:17,weight:1},
  {id:'mei_chair',district:0,anchor:0,duration:15,weight:1}
 ];
-const mod=(x,n)=>(x%n+n)%n;
-const unit=x=>Math.max(0,Math.min(1,x));
-const ease=x=>{x=unit(x);return x*x*(3-2*x);};
-function random(seed){let n=seed|0;return()=>{n=(Math.imul(n,1664525)+1013904223)|0;return(n>>>0)/4294967296;};}
 export function momentAnchor(anchor,travel,width){
  const first=Math.floor(travel*8.5/768);
  let best=null;
@@ -49,7 +46,7 @@ export function createMomentDirector(definitions=MOMENTS){
 }
 export function createMomentRenderer(a){
  const {rect,line,ellipse,poly,person,crate,sign,rand,shipBoat}=a;
- const event=(state,id,cell)=>state?.active?.id===id&&state.active.cell===cell?state.active:state?.done?.[id]?.cell===cell?state.done[id]:null;
+ const event=momentEvent;
  function maid(c,x,y,t,p,walk=false,arm=0,quietEars=false){
   person(c,x,y,t,p,{walk,coat:'#293849'});
   poly(c,[[x-3,y-16],[x+3,y-16],[x+4,y-6],[x-4,y-6]],'#d3e1d7');

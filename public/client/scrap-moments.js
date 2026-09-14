@@ -1,4 +1,5 @@
 // Optional scenes reset each visit; installed quest equipment comes from the save.
+import {mod,ease,unit,momentEvent,momentPhase,installedAt} from './anim-utils.js';
 export const SCRAP_MOMENTS=[
  {id:'panel_check',district:2,anchor:535,duration:20,weight:1},
  {id:'tool_fit',district:3,anchor:232,duration:19,weight:.8,group:'obstruction'},
@@ -11,14 +12,10 @@ export const SCRAP_MOMENTS=[
  {id:'robot_yield',district:0,anchor:415,duration:23,weight:.8,group:'obstruction'},
  {id:'cabin_light',district:1,anchor:120,duration:25,weight:.35}
 ];
-const unit=x=>Math.max(0,Math.min(1,x));
-const ease=x=>{x=unit(x);return x*x*(3-2*x);};
-const mod=(x,n)=>(x%n+n)%n;
 export function createScrapMomentRenderer(a){
  const {rect,line,ellipse,poly,person,crate}=a;
- const event=(state,id,cell)=>state?.active?.id===id&&state.active.cell===cell?state.active:state?.done?.[id]?.cell===cell?state.done[id]:null;
- const phase=(state,id,cell)=>{const e=event(state,id,cell);return e?e.progress*e.duration:-1;};
- const installed=(state,id)=>state?.quests?.[id]?.installed.includes('scrap');
+ const event=momentEvent,phase=momentPhase;
+ const installed=installedAt('scrap');
  const worker=(c,x,y,t,p,walk=false,action='work')=>person(c,x,y,t,p,{walk,action,hat:true,coat:'#a79a85'});
  function chair(c,x,y,p){
   line(c,x-5,y-17,x-5,y,p.trim,2);line(c,x+7,y-7,x+7,y,p.trim,2);

@@ -1,4 +1,5 @@
 // Unmanned work shares the pausable visit clock; its traces never become save flags.
+import {mod,ease,unit,momentEvent as event,momentPhase as phase} from './anim-utils.js';
 export const RELAY_MOMENTS=[
  {id:'empty_carrier',district:2,anchor:552,duration:38,weight:1},
  {id:'aligned_handoff',district:2,anchor:183,duration:34,weight:1},
@@ -11,11 +12,7 @@ export const RELAY_MOMENTS=[
  {id:'distant_freighter',district:1,anchor:548,duration:55,weight:.35},
  {id:'wing_glint',district:3,anchor:203,duration:35,weight:.35}
 ];
-const unit=x=>Math.max(0,Math.min(1,x));
-const ease=x=>{x=unit(x);return x*x*(3-2*x);};
-const mod=(x,n)=>(x%n+n)%n;
-const event=(state,id,cell)=>state?.active?.id===id&&state.active.cell===cell?state.active:state?.done?.[id]?.cell===cell?state.done[id]:null;
-const phase=(state,id,cell)=>{const e=event(state,id,cell);return e?e.progress*e.duration:-1;};
+
 export function relayCarrierPose(progress){
  const q=progress*38;
  return {x:q<17?478+ease(q/17)*182:q<24?660:660-ease((q-24)/14)*182,

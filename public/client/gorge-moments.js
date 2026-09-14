@@ -1,4 +1,5 @@
 // Vertical errands and ordinary pauses. All traces expire with this visit.
+import {mod,ease,unit,momentEvent as event,momentPhase as phase} from './anim-utils.js';
 export const GORGE_MOMENTS=[
  {id:'bread_lift',district:0,anchor:175,duration:31,weight:1},
  {id:'wind_plank',district:1,anchor:168,duration:34,weight:1},
@@ -11,11 +12,7 @@ export const GORGE_MOMENTS=[
  {id:'dust_curtain',district:1,anchor:367,duration:33,weight:.4,requires:'dusty'},
  {id:'rising_wings',district:1,anchor:549,duration:38,weight:.35}
 ];
-const unit=x=>Math.max(0,Math.min(1,x));
-const ease=x=>{x=unit(x);return x*x*(3-2*x);};
-const mod=(x,n)=>(x%n+n)%n;
-const event=(state,id,cell)=>state?.active?.id===id&&state.active.cell===cell?state.active:state?.done?.[id]?.cell===cell?state.done[id]:null;
-const phase=(state,id,cell)=>{const e=event(state,id,cell);return e?e.progress*e.duration:-1;};
+
 export function gorgeLiftPose(progress){
  const q=progress*31,lift=ease((q-5)/8)*(1-ease((q-20)/8));
  return {y:356-lift*87,breadInBasket:q>=3&&q<16,cupInBasket:q>=20,breadDelivered:q>=16};

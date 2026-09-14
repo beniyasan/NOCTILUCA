@@ -1,4 +1,5 @@
 // Plants, neighbors and water share the pausable visit clock. No story flags.
+import {mod,ease,unit,momentEvent as event,momentPhase as phase} from './anim-utils.js';
 export const JADE_MOMENTS=[
  {id:'guided_vine',district:1,anchor:146,duration:30,weight:1},
  {id:'selective_water',district:2,anchor:562,duration:35,weight:1},
@@ -11,11 +12,7 @@ export const JADE_MOMENTS=[
  {id:'leaf_waterfall',district:3,anchor:602,duration:31,weight:.4,requires:'wetLeaves'},
  {id:'night_bloom',district:2,anchor:220,duration:40,weight:.35}
 ];
-const unit=x=>Math.max(0,Math.min(1,x));
-const ease=x=>{x=unit(x);return x*x*(3-2*x);};
-const mod=(x,n)=>(x%n+n)%n;
-const event=(state,id,cell)=>state?.active?.id===id&&state.active.cell===cell?state.active:state?.done?.[id]?.cell===cell?state.done[id]:null;
-const phase=(state,id,cell)=>{const e=event(state,id,cell);return e?e.progress*e.duration:-1;};
+
 export function jadeWaterPose(progress){
  const q=progress*35;
  const x=q<4?488+ease(q/4)*42:q<10?530:q<14?530+ease((q-10)/4)*50:q<18?580:q<22?580+ease((q-18)/4)*50:q<28?630:630-ease((q-28)/7)*142;
