@@ -1,6 +1,6 @@
 // Animated actors and vehicles. Pure painters: everything needed comes in as
 // arguments, so the same drawing serves the live scene and cached thumbnails.
-import {rect,poly,line,ellipse,glow} from './pixel.js';
+import {rect,poly,line,ellipse,glow,HEIGHT} from './pixel.js';
 import {mod,ease as smooth} from './anim-utils.js';
 export function person(c,x,y,t,p,opts={}){
  // A 9 x 25 pixel sprite; foot position is the anchor, not the head.
