@@ -1,0 +1,5 @@
+# `supabase link --project-ref ...` replaces project_id for the selected project.
+project_id = "replace-with-your-lolipop-project-ref"
+
+[functions.api]
+verify_jwt = false
