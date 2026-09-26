@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { checkState, freshState, reduce, viewState, exactKeys, object, GameError, CONTENT_VERSION, SUPPORTED_CONTENT_VERSIONS, WORLDS } from "./game/rules.js";
 import data from "./game/content.js";
+import { DEFAULT_FEEDS, filterHeadlines, jstDay, parseFeed, responseText, sanitizeTalks, talkRequest } from "./passenger-talk.js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 const enc = new TextEncoder();
@@ -9,6 +10,7 @@ const supabaseUrl = env.SUPABASE_URL;
 const anonKey = env.SUPABASE_ANON_KEY;
 const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 const origin = env.LOLIPOP_ORIGIN;
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
 function response(body: unknown, status = 200, extra: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), { status, headers: { ...jsonHeaders, ...extra } });
@@ -67,9 +69,67 @@ async function restore(document: unknown, owner: string) {
   const state = structuredClone(checkState(input.state)); state.activeDialogue = null; state.activeAmbient = null; state.sidequests.active = null; state.location.atStation = true; state.location.mode = state.narrative.active ? "train" : "station"; state.suspended = true;
   return state;
 }
+// ---- passenger talk: the day's pool, generated on first demand ----
+const talkModel = env.PASSENGER_TALK_MODEL || "gpt-6-luna";
+const talkMaxBatches = Math.max(1, Math.min(10, Number(env.PASSENGER_TALK_MAX_BATCHES) || 3));
+async function timed(url: string, init: RequestInit, ms: number) {
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), ms);
+  try { return await fetch(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
+}
+async function fetchHeadlines() {
+  const feeds = (env.PASSENGER_TALK_FEEDS || "").split(",").map((v) => v.trim()).filter(Boolean);
+  const titles: string[] = [];
+  for (const feed of feeds.length ? feeds : DEFAULT_FEEDS) {
+    try { const r = await timed(feed, { headers: { "user-agent": "NOCTILUCA passenger-talk" } }, 8000); if (r.ok) titles.push(...parseFeed(await r.text())); } catch { /* one feed failing is fine */ }
+  }
+  return filterHeadlines(titles);
+}
+async function generateTalkBatch(db: SupabaseClient, day: string, batch: number, headlines: string[]) {
+  try {
+    const todays = headlines.length ? headlines : await fetchHeadlines();
+    const r = await timed("https://api.openai.com/v1/responses", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` }, body: JSON.stringify(talkRequest({ model: talkModel, headlines: todays, batch })) }, 120000);
+    if (!r.ok) throw new Error(`OPENAI_${r.status} ${(await r.text()).slice(0, 400)}`);
+    const talks = sanitizeTalks(JSON.parse(responseText(await r.json()) || "{}"));
+    if (!talks.length) throw new Error("NO_TALKS");
+    await db.from("passenger_talk_days").update({ last_error: null }).eq("day", day);
+    const done = await db.rpc("finish_passenger_talk_batch", { p_day: day, p_batch: batch, p_headlines: todays, p_talks: talks });
+    if (done.error) throw done.error;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String((error as { message: unknown }).message) : "unknown";
+    console.error("NOCTILUCA_PASSENGER_TALK_FAILED", message);
+    // Back off for a while so a failing feed or key is not retried on every request.
+    await db.from("passenger_talk_days").update({ locked_until: new Date(Date.now() + 10 * 60e3).toISOString(), last_error: message.slice(0, 500) }).eq("day", day);
+  }
+}
+async function passengerTalk(url: URL) {
+  const db = admin(), day = jstDay();
+  const want = Math.max(1, Math.min(talkMaxBatches, Number(url.searchParams.get("want")) || 1));
+  const read = async () => {
+    const [d, t] = await Promise.all([
+      db.from("passenger_talk_days").select("batches,headlines,locked_until").eq("day", day).maybeSingle(),
+      db.from("passenger_talks").select("id,size,tone,lines").eq("day", day).order("id"),
+    ]);
+    if (d.error) throw d.error; if (t.error) throw t.error;
+    return { batches: d.data?.batches ?? 0, headlines: (d.data?.headlines ?? []) as string[], talks: t.data ?? [] };
+  };
+  const pool = await read();
+  let generating = false;
+  if (env.OPENAI_API_KEY && pool.batches < want) {
+    const claimed = await db.rpc("claim_passenger_talk_batch", { p_day: day, p_want: want, p_max: talkMaxBatches });
+    if (claimed.error) throw claimed.error;
+    if (typeof claimed.data === "number") {
+      generating = true;
+      const job = generateTalkBatch(db, day, claimed.data, pool.headlines);
+      if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(job); else await job;
+    } else generating = pool.batches < want && pool.batches < talkMaxBatches;
+  }
+  return { day, batches: pool.batches, maxBatches: talkMaxBatches, generating, talks: pool.talks };
+}
+
 async function handle(request: Request) {
   const url = new URL(request.url); if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors() });
   const currentUser = await user(request); if (url.pathname.endsWith("/catalog")) return response({ worlds: WORLDS, topics: data.topics, people: data.npcs.map(({ id, name, role, en, where, detail, coat, hat, world }) => ({ id, name, role, en, where, detail, coat, hat, world })) }, 200, cors());
+  if (request.method === "GET" && url.pathname.endsWith("/passenger-talk")) return response(await passengerTalk(url), 200, cors());
   if (!currentUser && url.pathname.endsWith("/session")) return response({ authenticated: false, mode: "supabase" }, 200, cors());
   if (!currentUser) return response({ error: { code: "LOGIN_REQUIRED", message: "旅を保存するにはログインしてください。" } }, 401, cors());
   const db = admin(); const row = await journey(db, currentUser.id); const owner = currentUser.id;

@@ -20,6 +20,7 @@ await rm('dist-lolipop', { recursive: true, force: true });
 await cp('public', 'dist-lolipop', { recursive: true });
 await cp('lolipop/client/gateway.js', 'dist-lolipop/client/gateway.js');
 await cp('lolipop/client/main.js', 'dist-lolipop/client/main.js');
+await cp('lolipop/client/talk-pool.js', 'dist-lolipop/client/talk-pool.js');
 const template = await readFile('src/client/index.template.html', 'utf8');
 const html = template
   .replace('href="/signin-with-chatgpt"', 'href="#supabase-sign-in"')
