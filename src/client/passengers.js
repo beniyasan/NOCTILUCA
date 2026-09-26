@@ -172,11 +172,12 @@ export function createPassengerDirector({random:r=Math.random,talk=null}={}){
 }
 
 // ---- painter and speech bubble (DOM) ---------------------------------------
+// While `muted` (headphones on) talk goes on silently: no bubbles, and only template lines, so the daily pool is not spent unseen.
 export function createPassengers(host,cabin,{talk=null}={}){
  const canvas=document.createElement('canvas');canvas.className='passengers';canvas.setAttribute('aria-hidden','true');cabin.canvas.after(canvas);
  const bubble=document.createElement('div');bubble.className='passenger-bubble';bubble.hidden=true;bubble.setAttribute('aria-hidden','true');canvas.after(bubble);
- const c=canvas.getContext('2d');let geo=null,shown='',clock=0;
- const director=createPassengerDirector({talk});
+ const c=canvas.getContext('2d');let geo=null,shown='',clock=0,muted=false;
+ const director=createPassengerDirector({talk:ask=>muted?null:talk?.(ask)||null});
  const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));};
  const shade=(hex,k)=>{const n=parseInt(hex.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(v*k)));return '#'+[(n>>16)&255,(n>>8)&255,n&255].map(v=>f(v).toString(16).padStart(2,'0')).join('');};
 
@@ -250,7 +251,7 @@ export function createPassengers(host,cabin,{talk=null}={}){
   // match the cabin's night grade so people sit in the same light
   c.save();c.globalCompositeOperation='source-atop';c.fillStyle='rgba(12,7,4,.34)';c.fillRect(0,0,w,h);c.restore();
   const line=v.line;
-  if(line&&!geo.quiet){
+  if(line&&!geo.quiet&&!muted){
    const key=line.who+':'+line.text;
    if(key!==shown){shown=key;bubble.textContent=line.text;bubble.className='passenger-bubble'+(line.mark==='!'?' sharp':line.mark==='~'?' light':'');}
    bubble.hidden=false;
@@ -268,6 +269,8 @@ export function createPassengers(host,cabin,{talk=null}={}){
    canvas.style.width=m.w*m.s+'px';canvas.style.height=m.h*m.s+'px';geo={...m,quiet:geo?.quiet};draw();
   },
   arrive(ctx){director.arrive(ctx);},
+  setMuted(value){muted=!!value;draw();},
+  get muted(){return muted;},
   seed(ctx,size){director.seed(ctx,size);draw();},
   tick(dt,t,{quiet=false}={}){if(!geo)return;geo.quiet=quiet;director.advance(dt,{width:geo.w,quiet});draw(t);},
   get status(){const v=director.view;return {size:v.size,rel:v.rel,tone:v.tone,leaving:v.leaving,line:v.line?.text||null,members:v.members.map(m=>m.state)};},
