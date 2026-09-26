@@ -27,7 +27,18 @@ const html = template
   .replace('ChatGPTでログイン', 'メールリンクでログイン')
   .replace('href="/signout-with-chatgpt"', 'href="#supabase-sign-out"')
   .replace('ローカル確認版 · ChatGPT認証ではありません', 'ロリポップ版 · Supabase認証')
+  .replace(/<p class="privacy-note">[^<]*<\/p>/, '<p class="privacy-note">ログインすると、旅の名前・現在地・会話などの記録を保存します。メールアドレスはログインのためだけに使い、旅の記録には含めません。詳しくは<a href="/privacy.html">プライバシーポリシー</a>と<a href="/terms.html">利用規約</a>をご覧ください。</p>')
+  .replace('あなたの旅だけを、ここに残します。</footer>', 'あなたの旅だけを、ここに残します。<span class="legal-links"><a href="/privacy.html">プライバシーポリシー</a> · <a href="/terms.html">利用規約</a></span></footer>')
+  .replace('<link rel="stylesheet" href="/client/journey.css">', '<link rel="stylesheet" href="/client/journey.css">\n<link rel="stylesheet" href="/client/legal-links.css">')
   .replace('<script type="module" src="/client/main.js"></script>', '<script>window.NOCTILUCA_SUPABASE_URL='+JSON.stringify(url)+';window.NOCTILUCA_SUPABASE_ANON_KEY='+JSON.stringify(anon)+';window.NOCTILUCA_API_URL='+JSON.stringify(api)+'</script>\n<script type="module" src="/client/main.js"></script>');
+if (!html.includes('/privacy.html') || !html.includes('legal-links')) throw new Error('プライバシーポリシーへのリンクを入れられませんでした。テンプレートの変更を確認してください。');
 await writeFile('dist-lolipop/index.html', html);
+// Privacy policy and terms (Lolipop edition only).
+for (const page of ['privacy.html', 'terms.html', 'legal.css']) {
+  const text = await readFile(`lolipop/pages/${page}`, 'utf8');
+  if (text.includes('[[CONTACT_EMAIL]]')) throw new Error(`lolipop/pages/${page} の問い合わせ先 [[CONTACT_EMAIL]] を実際のアドレスに置き換えてください。`);
+  await writeFile(`dist-lolipop/${page}`, text);
+}
+await writeFile('dist-lolipop/client/legal-links.css', '.legal-links{display:block;margin-top:10px;font-size:11px;letter-spacing:.5px}.legal-links a,.privacy-note a{color:inherit;text-decoration:underline;text-underline-offset:2px}\n');
 await writeFile('dist-lolipop/.htaccess', 'DirectoryIndex index.html\n<IfModule mod_headers.c>\n  Header set Cache-Control "no-cache"\n</IfModule>\n');
 console.log('ロリポップ版を dist-lolipop/ に作成しました。');
