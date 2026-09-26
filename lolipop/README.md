@@ -60,7 +60,7 @@ SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
 SUPABASE_ANON_KEY=YOUR_ANON_KEY \
 SUPABASE_API_URL=https://YOUR_PROJECT.supabase.co/functions/v1/api \
 npm run build
-node .next/standalone/deploy-now/server.js
+node .next/standalone/server.js
 ```
 
 `LOLIPOP_ORIGIN`(Supabase secrets側)はデプロイなうの公開ドメインに合わせてください。

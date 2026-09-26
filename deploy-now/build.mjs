@@ -21,7 +21,8 @@ await cp(path.join(root, 'dist-lolipop'), path.join(here, 'public'), { recursive
 run(process.execPath, [path.join(here, 'node_modules', 'next', 'dist', 'bin', 'next'), 'build'], here);
 
 // Standalone output does not bundle public/ or .next/static/ — copy them next
-// to the generated server.js (nested under the app dir name in this repo).
+// to the generated server.js (at the standalone root, or nested if the tracing
+// root ever changes).
 const standalone = path.join(here, '.next', 'standalone');
 const findServerDir = async (dir) => {
   if (existsSync(path.join(dir, 'server.js'))) return dir;
