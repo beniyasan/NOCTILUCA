@@ -41,17 +41,30 @@ npm run build:lolipop
 
 ## ロリポップ!デプロイなう(GitHub連携)
 
-`deploy-now/`は、この静的版をロリポップ!デプロイなうへ載せるためのNext.js standaloneラッパーです。GitHub連携を設定すると、ブランチへのpushで自動デプロイされます。
+GitHub連携を設定すると、ブランチへのpushで自動デプロイされます。フレームワークは「静的サイト(static)」を選び、`dist-lolipop/`をそのまま配信します。
 
 ダッシュボード側の設定:
 
 1. プロジェクト作成時にGitHub連携で本リポジトリとブランチ(`feat/lolipop-supabase-timer`など)を選択
-2. build-configで`--root deploy-now`を指定(install `npm install` / build `npm run build` / output `.next/standalone`は既定のまま)
+2. build-configを次の値にする(rootはリポジトリルートのまま)
+   - install: `npm install`(build-lolipopはNode標準ライブラリのみ使用するため、省略できる場合は省略可)
+   - build: `npm run build:lolipop`
+   - output_dir: `dist-lolipop`
 3. 環境変数に`SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_API_URL`を登録
 
-`deploy-now/build.mjs`がルートで`scripts/build-lolipop.mjs`を実行し、`dist-lolipop/`を`deploy-now/public/`へコピーしてから`next build`します。生成物の`public/`と`.next/static/`もstandalone側へコピー済みです。
+CLIから変更する場合:
 
-ローカルでの確認:
+```sh
+lolipop build-config update \
+  --build "npm run build:lolipop" \
+  --output "dist-lolipop"
+```
+
+`LOLIPOP_ORIGIN`(Supabase secrets側)はデプロイなうの公開ドメインに合わせてください。
+
+### 別解: Next.jsとして配信する(`deploy-now/`)
+
+`deploy-now/`は、同じ静的版をNext.js standaloneサーバーで配信するラッパーです。フレームワークを`next`で作り直す場合に使います(build-config `--root deploy-now`、output `.next/standalone`は既定)。静的サイト構成では不要です。
 
 ```sh
 cd deploy-now
@@ -62,8 +75,6 @@ SUPABASE_API_URL=https://YOUR_PROJECT.supabase.co/functions/v1/api \
 npm run build
 node .next/standalone/server.js
 ```
-
-`LOLIPOP_ORIGIN`(Supabase secrets側)はデプロイなうの公開ドメインに合わせてください。
 
 ## APIの動作
 
