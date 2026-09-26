@@ -103,7 +103,7 @@ function advanceStation(dt){
  if(s.phase!==before){if(s.phase==='depart')beginLeg();if(s.phase==='stop'&&!gateway.snapshot.state.location.atStation)notify('station.stop');if(s.phase==='depart')notify('station.depart');}
 }
 function stationAction(){
- if(engine.timer?.active){if(!engine.timer.view.paused)void engine.timer.toggle();toast('タイマーを一時停止しました。再開は「時間・到着ベル」から。');return;}
+ if(engine.timer?.active){if(!engine.timer.view.paused)void engine.timer.toggle();toast('タイマーを一時停止しました。再開は車窓のタイマー操作から。');return;}
  if(!canMove()){toast('列車に戻るか、未確認の保存を解決してください。');return;}
  if(talk.isDirect){toast('会話を閉じてから、発車できます。');return;}
  if(state.transition)return;

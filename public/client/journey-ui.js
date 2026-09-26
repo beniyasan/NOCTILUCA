@@ -14,8 +14,10 @@ export function createJourneyUI(g,engine){
   $('account-open').classList.toggle('is-pending',g.blocked);
   $('signed-out-view').hidden=g.authenticated;$('signed-in-view').hidden=!g.authenticated;
   const local=g.mode==='local';$('runtime-badge').hidden=!local;
-  $('signin-link').href=local?'/dev/login':'/signin-with-chatgpt?return_to=%2F';$('signin-link').textContent=local?'ローカルのテストユーザーを選ぶ':'ChatGPTでログイン';
-  $('signout-link').href=local?'/dev/logout':'/signout-with-chatgpt?return_to=%2F';
+  const signInPath=typeof g.signInPath==='function'?g.signInPath():local?'/dev/login':'/signin-with-chatgpt?return_to=%2F';
+  const signOutPath=typeof g.signOutPath==='function'?g.signOutPath():local?'/dev/logout':'/signout-with-chatgpt?return_to=%2F';
+  $('signin-link').href=signInPath;$('signin-link').textContent=typeof g.authLabel==='function'?g.authLabel():local?'ローカルのテストユーザーを選ぶ':'ChatGPTでログイン';
+  $('signout-link').href=signOutPath;
   $('platform-toggle').hidden=engine.state.transition||engine.state.stop.phase!=='stop'||s.suspended;
   $('platform-toggle').disabled=busy||g.blocked||engine.talk.isDirect;
   $('platform-toggle').textContent=s.location.mode==='station'?'列車に戻る':'下車する';
