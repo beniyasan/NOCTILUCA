@@ -3,6 +3,7 @@ import {person,crate,steam,robot,drone,rotatingFan,workCrane,shipBoat,drawRay,dr
 import {tower,pagoda,dome,industry,gardenTree,sign,boulder,wreck,makeScene} from './cityscape.js';
 import {worlds,LIFE} from './worlds.js';
 import {createSceneGraph} from './scene.js';
+import {createCabin} from './cabin.js';
 import {createStationScene} from './station-scene.js';
 import {createSidequestSceneRenderer} from './sidequest-scenes.js';
 
@@ -28,6 +29,7 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 const state = {index:0,elapsed:0,time:0,travel:0,speed:1,paused:reducedMotion,auto:true,dwell:120,travelSeconds:null,transition:null,lap:1,immersive:false,sound:false,visitCounts:Array(worlds.length).fill(0),currentVisit:null,frames:0,stationStops:true,stopDuration:24,density:"normal",hints:true,stop:{phase:"arrive",t:0,held:false}};
 let W=900, activeScene=null, last=0, uiLast=0, resizeTimer=0, toastTimer=0, wakeTimer=0, volumeTimer=0;
 const thumbCache=new Map();
+const cabin=createCabin($('window'));let cabinAshore=false;
 const districtJourney=createDistrictJourney();
 const bell=createArrivalBell(()=>gateway.snapshot.state.settings);
 let legElapsed=0,legDuration=null,legActive=false;
@@ -229,7 +231,7 @@ function updateUI(force=false){
  $('visit-note').hidden=!state.hints;$('revisit').disabled=!!state.transition;
  talk.update();
  const ashore=gateway.snapshot.state.location.mode==='station';
- $('app').classList.toggle('ashore',ashore);
+ $('app').classList.toggle('ashore',ashore);if(ashore!==cabinAshore)resize();
  if(ashore){$('journey-mode').textContent='ホームで過ごす';$('stop-phase').textContent='下車中 · 列車はここで待っています';$('station-action').disabled=true;$('station-action-label').textContent='下車中';}
  $('revisit').disabled=!!state.transition||ashore||gateway.blocked;
  if(gateway.snapshot.state.suspended)$('stop-phase').textContent='ここから、また次の旅へ';
@@ -265,7 +267,11 @@ function resize(){
  // Percentages under zoom resolve differently across browsers, so a scaled sheet gets its height cap in px (divided back out of the zoom).
  const sheetScale=Math.min(1.8,Math.max(1,Math.min(b.width/1380,b.height/720))),appStyle=$('app').style;appStyle.setProperty('--sheet-scale',sheetScale.toFixed(2));
  if(sheetScale>1)appStyle.setProperty('--sheet-max-height',Math.floor(b.height/sheetScale-132)+'px');else appStyle.removeProperty('--sheet-max-height');
- const newW=Math.max(160,Math.min(1800,Math.round(b.width/b.height*HEIGHT)));if(newW===W&&activeScene)return;
+ // The carriage frames the view; the scene canvas fills only the window band it leaves open.
+ cabinAshore=gateway.snapshot.state.location?.mode==='station';
+ const box=cabin.layout(b.width,b.height,!state.immersive&&!cabinAshore),view=box||{w:b.width,h:b.height};
+ Object.assign(canvas.style,box?{left:box.x+'px',top:box.y+'px',width:box.w+'px',height:box.h+'px'}:{left:'',top:'',width:'',height:''});
+ const newW=Math.max(160,Math.min(1800,Math.round(view.w/view.h*HEIGHT)));if(newW===W&&activeScene)return;
  W=newW;districtSurface.width=W;districtCtx.imageSmoothingEnabled=false;districtCache.clear();canvas.width=W;canvas.height=HEIGHT;blendSurface.width=W;blendSurface.height=HEIGHT;ctx.imageSmoothingEnabled=false;blendCtx.imageSmoothingEnabled=false;cache.clear();activeScene=getScene(state.index);if(state.transition)state.transition.next=getScene(state.transition.to);render(0);
 }
 const layoutObserver=new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(resize,110);});
