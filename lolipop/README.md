@@ -39,6 +39,32 @@ npm run build:lolipop
 
 メールリンク認証とGoogle OAuthに対応しています。Google OAuthを使う場合はSupabase DashboardでGoogle Providerと本番Redirect URLを設定します。
 
+## ロリポップ!デプロイなう(GitHub連携)
+
+`deploy-now/`は、この静的版をロリポップ!デプロイなうへ載せるためのNext.js standaloneラッパーです。GitHub連携を設定すると、ブランチへのpushで自動デプロイされます。
+
+ダッシュボード側の設定:
+
+1. プロジェクト作成時にGitHub連携で本リポジトリとブランチ(`feat/lolipop-supabase-timer`など)を選択
+2. build-configで`--root deploy-now`を指定(install `npm install` / build `npm run build` / output `.next/standalone`は既定のまま)
+3. 環境変数に`SUPABASE_URL`、`SUPABASE_ANON_KEY`、`SUPABASE_API_URL`を登録
+
+`deploy-now/build.mjs`がルートで`scripts/build-lolipop.mjs`を実行し、`dist-lolipop/`を`deploy-now/public/`へコピーしてから`next build`します。生成物の`public/`と`.next/static/`もstandalone側へコピー済みです。
+
+ローカルでの確認:
+
+```sh
+cd deploy-now
+npm install
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co \
+SUPABASE_ANON_KEY=YOUR_ANON_KEY \
+SUPABASE_API_URL=https://YOUR_PROJECT.supabase.co/functions/v1/api \
+npm run build
+node .next/standalone/deploy-now/server.js
+```
+
+`LOLIPOP_ORIGIN`(Supabase secrets側)はデプロイなうの公開ドメインに合わせてください。
+
 ## APIの動作
 
 ブラウザは匿名キーでAuthへ接続し、取得したBearer JWTをEdge Functionへ送ります。ゲーム状態の更新は`commit_journey_command` RPCだけが行います。RPCは行ロック、revision検証、操作IDの再送を1トランザクションで処理します。RLSによりブラウザからのテーブル直接更新は拒否されます。
