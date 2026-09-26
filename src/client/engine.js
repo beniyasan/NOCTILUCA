@@ -1086,6 +1086,8 @@ function resize(){
  const panelHeight=Math.ceil($('console').getBoundingClientRect().height);
  if(panelHeight!==consoleHeight){consoleHeight=panelHeight;$('app').style.setProperty('--console-height',panelHeight+'px');}
  const b=$('window').getBoundingClientRect();if(!b.width||!b.height)return;
+ // Grow the conversation sheet with the window; its px layout is tuned for a ~1380x720 window.
+ const sheetScale=Math.min(1.8,Math.max(1,Math.min(b.width/1380,b.height/720))).toFixed(2);$('app').style.setProperty('--sheet-scale',sheetScale);
  const newW=Math.max(160,Math.min(1800,Math.round(b.width/b.height*HEIGHT)));if(newW===W&&activeScene)return;
  W=newW;districtSurface.width=W;districtCtx.imageSmoothingEnabled=false;districtCache.clear();canvas.width=W;canvas.height=HEIGHT;blendSurface.width=W;blendSurface.height=HEIGHT;ctx.imageSmoothingEnabled=false;blendCtx.imageSmoothingEnabled=false;cache.clear();activeScene=getScene(state.index);if(state.transition)state.transition.next=getScene(state.transition.to);render(0);
 }
