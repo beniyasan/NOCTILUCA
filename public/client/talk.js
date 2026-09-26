@@ -1,3 +1,4 @@
+import {portraitSrc} from './portraits.js';
 const $=id=>document.getElementById(id);
 const el=(tag,cls='',text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const button=(label,fn,cls='talk-choice')=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',fn);return b;};
@@ -13,6 +14,8 @@ export function createTalk(engine,g,catalog){
   $('talk-footer').textContent=g.authenticated?'会話の完了時にサーバーへ記録します。話を聞くだけでは仕事を引き受けません。':'ゲストの会話です。記憶はこのページを閉じるまで。';
  }
  function portrait(n){
+  const src=portraitSrc(n.id);
+  if(src){const i=el('img','npc-portrait is-drawn');i.src=src;i.alt='';i.width=60;i.height=66;i.decoding='async';return i;}
   const c=el('canvas','npc-portrait');c.width=60;c.height=66;c.setAttribute('aria-hidden','true');const x=c.getContext('2d');
   const p=worlds.find(w=>w.id===n.world);x.fillStyle=p.mid;x.fillRect(0,0,60,66);x.fillStyle=p.accent+'55';x.fillRect(7,9,15,14);
   x.fillStyle='#111b25';x.fillRect(17,55,28,11);x.fillStyle=n.coat;x.fillRect(21,32,19,27);x.fillRect(16,36,5,18);x.fillRect(40,36,5,18);
