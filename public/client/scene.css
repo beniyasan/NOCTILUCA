@@ -62,7 +62,7 @@ dialog{color:var(--ink);font-family:var(--sans);border:1px solid #42596080;borde
 .air-footer{display:flex;justify-content:flex-end;margin-top:10px}.air-footer button{border:0;background:transparent;color:#94aaa7;font-size:9px;padding:6px 0 3px;letter-spacing:.5px}.air-footer button:hover{color:#deebe1}
 @keyframes voice-arrives{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .immersive .overheard,.reading .overheard{display:none!important}
-.rail-sheet{position:absolute;z-index:9;right:24px;bottom:48px;width:425px;max-width:calc(100% - 48px);max-height:calc(100% - 132px);display:flex;flex-direction:column;background:linear-gradient(140deg,#152531f5,#0c1824fa);border:1px solid #8cac9c50;border-radius:13px;box-shadow:0 22px 65px #010a1388;backdrop-filter:blur(12px);animation:voice-arrives .24s ease;overflow:hidden;zoom:var(--sheet-scale,1)}
+.rail-sheet{position:absolute;z-index:9;right:24px;bottom:48px;width:425px;max-width:calc(100% - 48px);max-height:var(--sheet-max-height,calc(100% - 132px));display:flex;flex-direction:column;background:linear-gradient(140deg,#152531f5,#0c1824fa);border:1px solid #8cac9c50;border-radius:13px;box-shadow:0 22px 65px #010a1388;backdrop-filter:blur(12px);animation:voice-arrives .24s ease;overflow:hidden;zoom:var(--sheet-scale,1)}
 .sheet-head{padding:20px 23px 15px;border-bottom:1px solid #92a4a31b;position:relative;flex:none}
 .sheet-head .sheet-eyebrow{color:#8ca89f;font:9px var(--sans);letter-spacing:1.5px;padding-right:25px;line-height:1.8}
 .sheet-head h2{color:#e0e8de;font-size:22px;font-weight:400;letter-spacing:2px;margin:6px 0;line-height:1.3}
