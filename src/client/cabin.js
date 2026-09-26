@@ -9,7 +9,7 @@ const Q={wall:'#6b4428',wallHi:'#85573a',wallLo:'#4a2e1c',wood:'#7a4e2e',woodHi:
 export function createCabin(host){
  const canvas=document.createElement('canvas');canvas.className='cabin';canvas.setAttribute('aria-hidden','true');
  host.querySelector('#scene').after(canvas);
- const c=canvas.getContext('2d');let key='';
+ const c=canvas.getContext('2d');let key='',metrics=null;
  const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));};
 
  function panes(w,h){
@@ -84,10 +84,12 @@ export function createCabin(host){
  function layout(width,height,enabled){
   const on=enabled&&height>=230&&width>=240;
   canvas.hidden=!on;host.classList.toggle('has-cabin',on);
-  if(!on){key='';return null;}
+  if(!on){key='';metrics=null;return null;}
   const s=Math.max(2,Math.round(height/225)),w=Math.ceil(width/s),h=Math.ceil(height/s),k=w+'x'+h+'@'+s;
   if(k!==key){key=k;canvas.width=w;canvas.height=h;canvas.style.width=w*s+'px';canvas.style.height=h*s+'px';c.imageSmoothingEnabled=false;draw(w,h);}
+  metrics={w,h,s,by:h-BOTTOM};
   return {x:SIDE*s,y:TOP*s,w:(w-SIDE*2)*s,h:(h-TOP-BOTTOM)*s};
  }
- return {layout,canvas};
+ // The cabin's pixel grid, for layers that sit on the same seat (passengers).
+ return {layout,canvas,get metrics(){return metrics;}};
 }

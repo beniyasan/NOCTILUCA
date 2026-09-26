@@ -12,7 +12,7 @@ await writeFile('src/game/scenario-content.js','// Generated from content/scenar
 
 const CLIENT=[
  'anim-utils.js','pixel.js','worlds.js','sprites.js','cityscape.js','station-scene.js','scene.js',
- 'engine.js','cabin.js','scenery.js','place-scenes.js',
+ 'engine.js','cabin.js','passengers.js','scenery.js','place-scenes.js',
  'kowloon-moments.js','scrap-moments.js','pelagic-moments.js','gorge-moments.js','jade-moments.js','relay-moments.js',
  'focus-clock.js','arrival-bell.js','timer-ui.js','timer-tasks-ui.js','music.js','music-ui.js',
  'main.js','gateway.js','portraits.js','talk.js','journey-ui.js','guest.js','story-ui.js','reset-ui.js','operation-id.js',
