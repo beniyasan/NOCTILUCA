@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // deploy-now/: generated standalone bundle and the copied dist-lolipop assets.
+    "deploy-now/.next/**",
+    "deploy-now/public/**",
+    "deploy-now/next-env.d.ts",
+    "deploy-now/node_modules/**",
   ]),
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
