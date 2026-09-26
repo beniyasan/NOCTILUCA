@@ -1,4 +1,5 @@
 import {createPlaceScenes} from './place-scenes.js';
+import {unit} from './anim-utils.js';
 // View-only districts. These never send commands or modify a player's world.
 export const DISTRICTS={
  kowloon:[['駅前の広告街','重なる看板と、小さな高架列車。'],['深夜の市場','重なる看板と濡れた窓。路地を譲り合い、湯気が換気口へ流れる。'],['運河沿い','建物が途切れ、水面に広告の灯りが伸びる。荷船が橋をくぐる。'],['屋上の住宅街','物干しと給水塔。換気扇のそばで、誰かが夜食をとっている。']],
@@ -18,7 +19,6 @@ export const ROUTES={
  kowloon:[0,1,3,2],scrap:[0,3,2,1],pelagic:[0,2,3,1],
  gorge:[0,3,2,1],jade:[0,2,1,3],relay:[0,2,1,3]
 };
-const unit=n=>Math.max(0,Math.min(1,n));
 export function routeScene(world,progress,duration){
  const order=ROUTES[world],p=unit(progress),boundaries=[.10,.36,.67];
  const fade=Math.min(.09,3/Math.max(.1,duration));

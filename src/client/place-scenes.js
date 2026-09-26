@@ -1,10 +1,10 @@
 import {pelagicDockPose} from './pelagic-moments.js';
+import {ease} from './anim-utils.js';
 // Six authored travel scenes. All motion uses the engine's pausable local
 // clock; geometry and actors share world coordinates, including tile wrapping.
 export function createPlaceScenes(a){
  const {surface,rect,line,ellipse,poly,rand,ir,tower,sign,person,crate,mod}=a;
  const owns=p=>p.district===1&&['neon','water','rock','scrap','garden','void'].includes(p.kind);
- const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
  const anchors=(travel,speed,span,width,fn)=>{
   const first=Math.floor(travel*speed/span);
   for(let n=first-1;n<first+Math.ceil(width/span)+1;n++)fn(n*span-travel*speed,mod(n,3));

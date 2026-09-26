@@ -1,4 +1,5 @@
 // Harbor incidents are local to a visit; installed equipment comes from the save.
+import {mod,ease,unit,momentEvent,momentPhase,installedAt} from './anim-utils.js';
 export const PELAGIC_MOMENTS=[
  {id:'gangway',district:1,anchor:183,duration:26,weight:1},
  {id:'net_guest',district:3,anchor:477,duration:24,weight:1},
@@ -11,11 +12,8 @@ export const PELAGIC_MOMENTS=[
  {id:'fog_return',district:2,anchor:646,duration:36,weight:.4,requires:'fog'},
  {id:'deep_shadow',district:1,anchor:285,duration:32,weight:.35}
 ];
-const unit=x=>Math.max(0,Math.min(1,x));
-const ease=x=>{x=unit(x);return x*x*(3-2*x);};
-const mod=(x,n)=>(x%n+n)%n;
-export const pelagicEvent=(state,id,cell)=>state?.active?.id===id&&state.active.cell===cell?state.active:state?.done?.[id]?.cell===cell?state.done[id]:null;
-const phase=(state,id,cell)=>{const e=pelagicEvent(state,id,cell);return e?e.progress*e.duration:-1;};
+export const pelagicEvent=momentEvent;
+const phase=momentPhase;
 export const pelagicWave=t=>Math.sin(t*.63)*2.1+Math.sin(t*.27)*1.2;
 export function pelagicDockPose(t,state,cell){
  const q=phase(state,'gangway',cell),l=phase(state,'pier_lunch',cell),b=phase(state,'deep_shadow',cell);
@@ -26,7 +24,7 @@ export function pelagicDockPose(t,state,cell){
 }
 export function createPelagicMomentRenderer(a){
  const {rect,line,ellipse,poly,person,crate}=a;
- const installed=(state,id)=>state?.quests?.[id]?.installed.includes('pelagic');
+ const installed=installedAt('pelagic');
  const worker=(c,x,y,t,p,walk=false,action='work')=>person(c,x,y,t,p,{walk,action,hat:true,coat:'#93a9a2'});
  function fish(c,x,y,p,dir=1){rect(c,x-2,y,5,2,p.accent+'bb');line(c,x-3*dir,y-1,x-3*dir,y+3,p.light+'99');}
  function wake(c,x,y,t,p,strength=1){
