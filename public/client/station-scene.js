@@ -13,7 +13,7 @@ function stationLayout(width){
 function stationBackground(s,width){
  const p=s.p,l=stationLayout(width),r=rand(p.seed+450),e=surface(l.logical,HEIGHT),c=e.getContext('2d'),w=l.logical;
  // Open canopy: the city is visible through it.
- const roofColor={neon:'#342734',scrap:'#34383d',water:'#244e5d',rock:'#49393d',garden:'#284339',void:'#293148'}[p.kind];
+ const roofColor={neon:'#342734',scrap:'#34383d',water:'#244e5d',rock:'#49393d',garden:'#284339',void:'#293148',undersea:'#15394a',volcano:'#3a1a18',sky:'#2e3868'}[p.kind];
  if(p.kind==='water'){
   poly(c,[[0,216],[38,178],[w-43,178],[w,216]],'#32768799');
   for(let x=12;x<w;x+=65){line(c,x,213,x+24,178,p.accent+'88');}
@@ -54,6 +54,15 @@ function stationBackground(s,width){
  }else if(p.kind==='water'){
   poly(c,[[x-10,sy],[x+10,sy-18],[x+130,sy-18],[x+155,sy]],'#41808a');text(c,'TIDE & TEA'.replace('&','/'),x+72,sy-12,p.light,1,'center');
   rect(c,x+158,sy+29,40,34,p.trim);rect(c,x+161,sy+32,34,26,'#246b76');line(c,x+161,sy+34,x+194,sy+34,p.accent);rect(c,x+160,sy+62,36,3,p.near);
+ }else if(p.kind==='undersea'){
+  ellipse(c,x+75,sy-2,82,16,p.trim);ellipse(c,x+75,sy-3,78,13,'#1d5566');text(c,'DEEP KITCHEN',x+75,sy-6,p.light,1,'center');
+  for(let i=0;i<3;i++){ellipse(c,x+170+i*14,sy+30+i%2*8,5,5,p.trim);ellipse(c,x+170+i*14,sy+30+i%2*8,3,3,p.light+'aa');}
+ }else if(p.kind==='volcano'){
+  rect(c,x-6,sy-9,161,11,p.trim);rect(c,x+2,sy-26,145,17,p.near);text(c,'LAVA GRILL',x+74,sy-20,p.light,1,'center');
+  rect(c,x+156,sy+40,30,24,'#2a1210');rect(c,x+159,sy+43,24,6,p.neon);for(let i=0;i<4;i++)rect(c,x+160+i*6,sy+36,2,4,p.light);
+ }else if(p.kind==='sky'){
+  poly(c,[[x-8,sy+2],[x+75,sy-26],[x+158,sy+2]],'#c85a5a');rect(c,x-4,sy,156,3,p.trim);text(c,'CLOUD SOUP',x+75,sy-10,p.light,1,'center');
+  for(let i=0;i<3;i++){ellipse(c,x+166+i*12,sy+20-i*6,5,6,['#ff7aa8','#9fe3ff','#ffd07a'][i]);line(c,x+166+i*12,sy+26-i*6,x+170,sy+60,'#d8d0e088');}
  }else if(p.kind==='rock'){
   rect(c,x-6,sy-7,161,9,p.trim);rect(c,x+3,sy-27,141,20,p.near);text(c,'RIDGE CANTEEN',x+74,sy-19,p.light,1,'center');
   for(let i=0;i<4;i++)crate(c,x+151+i%2*16,sy+51-Math.floor(i/2)*14,15,13,p);

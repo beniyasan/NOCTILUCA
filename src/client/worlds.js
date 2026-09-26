@@ -30,6 +30,22 @@ export const worlds=[
    {weather:'DEEP SILENCE / LOCAL --:--',note:'中継環は静かに回り、補修ポッドだけが時折灯りを引く。',traffic:.6,particles:.7,feature:'pods'},
    {weather:'MICROMETEOR / LOCAL --:--',note:'小さな破片が漂い、補修ポッドがいつもの点検を続ける。',traffic:.52,particles:1.18,feature:'debris'},
    {weather:'LONG RANGE LINK / LOCAL --:--',note:'遠距離通信の繁忙時間。無人搬送体が数珠つなぎで通り過ぎる。',traffic:1.1,particles:.78,feature:'convoy'}
+ ]},
+ // The outer planets. Painted by frontier-scenes.js; gimmicks in frontier-moments.js.
+ {id:'abyss',name:'深藍アビス',en:'ABYSSAL ARCOLOGY',description:'光の届かない海の底で、窓の灯りが呼吸している。',detail:'海溝の縁に築かれた気密ドームの街。珊瑚の塔と昆布の畑が、潮の流れに揺れる。',sector:'SECTOR 97 · DEEP OCEAN',weather:'MARINE SNOW / DEPTH 2,140 M',station:'深藍第7気密駅',seed:61507,sky:['#0d4f66','#07314a','#020b1a'],far:'#0b2c40',mid:'#0e3346',near:'#081a28',trim:'#2f6f7a',light:'#b8f3e6',accent:'#5ff0d8',neon:'#ff7ad9',haze:'#1f8fa0',planet:'#7fd0d6',kind:'undersea',rain:0,chord:[87.31,130.81,174.61,220],conditions:[
+   {weather:'MARINE SNOW / DEPTH 2,140 M',note:'白い粒がゆっくり降る。気密通路を、配達カプセルが行き来する。',traffic:.9,particles:1.0,feature:'snow'},
+   {weather:'BIOLUMINESCENCE / DEPTH 2,160 M',note:'発光生物が多い夜。珊瑚の塔が、ほのかに色を変えている。',traffic:.75,particles:1.15,feature:'glow'},
+   {weather:'CURRENT SHIFT / DEPTH 2,120 M',note:'潮の向きが変わる時間。昆布の畑が一斉に同じ方へなびく。',traffic:1.05,particles:.85,feature:'current'}
+ ]},
+ {id:'caldera',name:'紅蓮カルデラ',en:'EMBER CALDERA',description:'火口の熱で、この街は冬を知らない。',detail:'活火山のカルデラに広がる鋳造と地熱の街。溶岩の運河を橋が渡り、火口の縁には湯の町がある。',sector:'SECTOR 104 · MAGMA BELT',weather:'EMBER FALL / LOCAL 23:31',station:'カルデラ環状駅',seed:40961,sky:['#12070c','#3a0f14','#8a2a14'],far:'#2a1216',mid:'#2b1a1c',near:'#160d12',trim:'#6e4a3c',light:'#ffd08a',accent:'#ffb347',neon:'#ff4b2b',haze:'#c2441f',planet:'#d9653b',kind:'volcano',rain:0,chord:[77.78,116.54,155.56,207.65],conditions:[
+   {weather:'EMBER FALL / LOCAL 23:31',note:'火の粉がゆるく舞う。鋳造所の窓が、いつもより明るい。',traffic:1.0,particles:1.0,feature:'embers'},
+   {weather:'ASH HAZE / LOCAL 00:12',note:'細かな灰が降る夜。掃除機械が橋の上を何度も往復している。',traffic:.7,particles:1.2,feature:'ash'},
+   {weather:'CLEAR GLOW / LOCAL 22:48',note:'風が噴煙を運び去った。火口の縁の湯けむりまで見える。',traffic:1.1,particles:.7,feature:'clear'}
+ ]},
+ {id:'aerie',name:'蒼穹アルカ',en:'SKY ARCA',description:'雲の海の上で、島々が静かに浮かんでいる。',detail:'浮遊島をつなぐ吊り橋とゴンドラの街。風車が回り、飛行船が雲の港に着く。',sector:'SECTOR 121 · STRATOSPHERE',weather:'CLOUD SEA / ALT 9,800 M',station:'雲上アルカ駅',seed:88117,sky:['#0a1030','#1c2a5c','#6b5a8a'],far:'#2a3560',mid:'#2d3a66',near:'#161d3a',trim:'#8a93c0',light:'#fff1c9',accent:'#9fe3ff',neon:'#ffb0d0',haze:'#8fa3d8',planet:'#f2d8b0',kind:'sky',rain:0,chord:[116.54,174.61,233.08,293.66],conditions:[
+   {weather:'CLOUD SEA / ALT 9,800 M',note:'雲の海が穏やかに流れる。ゴンドラが島から島へ渡っていく。',traffic:.95,particles:.9,feature:'gondola'},
+   {weather:'HIGH WIND / ALT 9,950 M',note:'風の強い夜。風車がよく回り、凧を揚げる人が多い。',traffic:.8,particles:1.1,feature:'wind'},
+   {weather:'MOONLIT HARBOR / ALT 9,720 M',note:'月明かりの港。飛行船が、ゆっくりと係留塔へ寄っていく。',traffic:1.1,particles:.75,feature:'airship'}
  ]}
 ];
 export const LIFE={
@@ -38,5 +54,8 @@ export const LIFE={
  water:{landmark:'第3埠頭の灯台',shop:'潮待ち売店',shopEn:'TIDE & TEA',stationEn:'PELAGIC PIER 03',note:['整備艇が網のそばを通る。海の下には、大きな影。','薄い海霧の向こうで、いつもの灯台が光っている。','漁船がゆっくり帰港する。埠頭では網を引き上げている。']},
  rock:{landmark:'峡谷リッジの居住岩',shop:'岩棚休憩所',shopEn:'RIDGE CANTEEN',stationEn:'CANYON RIDGE',note:['谷を渡るゴンドラ。岩棚の昇降機は物資を運び続ける。','粉塵の向こうでも、崖の食堂には灯りがついている。','遠い岩棚まで見える日。作業員が昇降機を見送る。']},
  garden:{landmark:'翡翠の段々温室',shop:'こもれび茶房',shopEn:'LEAF & TEA',stationEn:'JADE GARDEN',note:['温室の手入れが始まる。花びらが通りを横切っていく。','散水機が葉を濡らす。庭師が鉢のそばを歩いている。','細い雨の温室。軒下には、いつもの小さな猫。']},
+ undersea:{landmark:'第7気密ドーム',shop:'潮灯り食堂',shopEn:'DEEP KITCHEN',stationEn:'ABYSS LOCK 07',note:['気密通路を配達カプセルが渡る。窓の外を魚の群れ。','珊瑚の塔の灯りが、ゆっくりと色を変えている。','昆布の畑で、収穫艇が静かに働いている。']},
+ volcano:{landmark:'大鋳造所の煙突',shop:'溶岩焼き屋台',shopEn:'LAVA GRILL',stationEn:'CALDERA RING',note:['溶岩の運河を、荷車が橋の上から渡っていく。','鋳造所の型が赤く光り、職人が次の注ぎを待つ。','火口の縁の湯けむり。提灯が風に揺れている。']},
+ sky:{landmark:'浮島の係留塔',shop:'雲間のスープ屋',shopEn:'CLOUD SOUP',stationEn:'SKY ARCA',note:['ゴンドラが島から島へ渡る。下は一面の雲。','風車がよく回る夜。凧が雲の上で揺れている。','飛行船が係留塔へ寄っていく。港の灯りが灯る。']},
  void:{landmark:'88番中継環',shop:'無人補給スタンド',shopEn:'AUTOMAT / 88',stationEn:'RELAY 88',note:['整備ポッドが中継環を点検し、充電台へ帰っていく。','小さな破片がゆっくり流れる。補修灯は静かに点いている。','搬送ポッドが接続環を通る。無人のホームにも仕事がある。']}
 };

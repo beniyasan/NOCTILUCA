@@ -3,7 +3,7 @@
 import {rect,line,mod,smooth,HEIGHT,TILE} from './pixel.js';
 import {makeScene,drawStrip,waterSurface,worldLife,lifeClock,scenePositions} from './cityscape.js';
 import {drawHovercraft,drawElevatedRail,drawRelayRing} from './sprites.js';
-export function createSceneGraph({state,gateway,getStopState,journeyScenery,buildVisit,momentDirectors,districtRenderer,sidequestRenderer,momentRenderer,scrapRenderer,pelagicRenderer,gorgeRenderer,jadeRenderer,relayRenderer,stationScene,districtSurface,districtCtx}){
+export function createSceneGraph({state,gateway,getStopState,journeyScenery,buildVisit,momentDirectors,districtRenderer,sidequestRenderer,momentRenderer,scrapRenderer,pelagicRenderer,gorgeRenderer,jadeRenderer,relayRenderer,frontierRenderer,stationScene,districtSurface,districtCtx}){
 const cache=new Map(),districtCache=new Map();
 function getScene(index,width){const key=index+':'+width;let s=cache.get(key);if(!s){s=makeScene(index,width);cache.set(key,s);}return s;}
 function getDistrictScene(base,district,width){
@@ -61,6 +61,7 @@ function drawCityScene(c,s,time,travel,width,v,stop,weather=false){
  if(authored)districtRenderer.background(c,s,lifeClock(v,time),travel,width);
  else if(p.kind==='water'||(p.kind==='neon'&&p.district===2)||(p.kind==='garden'&&p.district===3))waterSurface(c,s,time,travel,width,v);
  relayRenderer.background(c,s,lifeClock(v,time),travel,width,s.momentState);
+ frontierRenderer.background(c,s,lifeClock(v,time),travel,width,s.momentState);
  drawStrip(c,s.layers[0],travel*2.3,width);
  const g=c.createLinearGradient(0,140,0,430);g.addColorStop(0,p.haze+'00');g.addColorStop(.7,p.haze+(p.kind==='water'?'10':'20'));g.addColorStop(1,p.haze+'0a');c.fillStyle=g;c.fillRect(0,140,width,290);
  const count=Math.min(s.traffic.length,Math.max(2,Math.floor(7*v.traffic*(state.density==='quiet'?.5:1))));
@@ -76,6 +77,7 @@ function drawCityScene(c,s,time,travel,width,v,stop,weather=false){
  gorgeRenderer.draw(c,s,lifeClock(v,time),travel,width,s.momentState);
  jadeRenderer.draw(c,s,lifeClock(v,time),travel,width,s.momentState);
  relayRenderer.draw(c,s,lifeClock(v,time),travel,width,s.momentState);
+ frontierRenderer.draw(c,s,lifeClock(v,time),travel,width,s.momentState);
  sidequestRenderer.draw(c,s,lifeClock(v,time),travel,width,s.momentState);
  if(!p.district&&['neon','garden','void'].includes(p.kind))drawElevatedRail(c,s,time,travel,width);
  drawStrip(c,s.layers[2],travel*23.5,width);

@@ -19,7 +19,10 @@ export const WORLDS = [
   {id:'pelagic',name:'蒼海ドック',station:'蒼海第3埠頭'},
   {id:'gorge',name:'岩海峡谷',station:'峡谷リッジ駅'},
   {id:'jade',name:'翡翠ガーデン',station:'翡翠園前駅'},
-  {id:'relay',name:'ナイト・リレー',station:'リレー88 接続環'}
+  {id:'relay',name:'ナイト・リレー',station:'リレー88 接続環'},
+  {id:'abyss',name:'深藍アビス',station:'深藍第7気密駅'},
+  {id:'caldera',name:'紅蓮カルデラ',station:'カルデラ環状駅'},
+  {id:'aerie',name:'蒼穹アルカ',station:'雲上アルカ駅'}
 ];
 export class GameError extends Error {
   constructor(code,message,status=400){super(message);this.code=code;this.status=status;}
@@ -39,7 +42,7 @@ export function displayName(value){
 export function freshState(){return {
   schemaVersion:SCHEMA,contentVersion:CONTENT_VERSION,displayName:'',
   location:{world:'kowloon',mode:'train',atStation:true},suspended:false,
-  visits:{kowloon:1,scrap:0,pelagic:0,gorge:0,jade:0,relay:0},
+  visits:{kowloon:1,scrap:0,pelagic:0,gorge:0,jade:0,relay:0,abyss:0,caldera:0,aerie:0},
   actors:{},plays:{},completed:{},last:{},notes:[],heard:[],
   activeDialogue:null,activeAmbient:null,legacyImported:false,focusTasks:[],
   settings:{chatter:true,frequency:'normal',auto:true,dwell:120,stopDuration:24,density:'normal',hints:true,speed:1,stationStops:true,travelSeconds:null,focusSeconds:1500,focusGoal:'',breakSeconds:300,longBreakSeconds:900,longBreakEvery:4,arrivalBell:true,bellVolume:60,musicTrack:'waltz',musicVolume:35},

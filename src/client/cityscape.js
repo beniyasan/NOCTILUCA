@@ -212,10 +212,13 @@ function createLayer(p,depth,width){
  }
  return e;
 }
+// Planets painted by another module register here (frontier-scenes.js), so
+// this module never imports them: {sky,layer,life} for the station district.
+export const PAINTERS={};
 export function makeScene(index,width){
- const p=worlds[index],r=rand(p.seed+149);
- const s={p,index,width,heroX:width<420?Math.max(65,width*.31):width*.27,sky:drawSky(p,width),layers:[],traffic:[],particles:[],beacons:[],station:null};
- for(let d=0;d<3;d++)s.layers.push(createLayer(p,d,width));
+ const p=worlds[index],r=rand(p.seed+149),custom=PAINTERS[p.kind],station={...p,district:0};
+ const s={p,index,width,heroX:width<420?Math.max(65,width*.31):width*.27,sky:custom?custom.sky(station,width):drawSky(p,width),layers:[],traffic:[],particles:[],beacons:[],station:null};
+ for(let d=0;d<3;d++)s.layers.push(custom?custom.layer(station,d,width):createLayer(p,d,width));
  for(let i=0;i<12;i++)s.traffic.push({x:r()*2000,y:105+r()*190,speed:(10+r()*19)*(i%2?1:-1),size:r()>.65?1.1:.65,phase:r()*50});
  for(let i=0;i<180;i++)s.particles.push({x:r()*1500,y:r()*HEIGHT,z:.3+r()*.8,phase:r()*Math.PI*2});
  return s;
@@ -320,6 +323,7 @@ export function waterSurface(c,s,t,travel,width,v){
 }
 export function worldLife(c,s,time,travel,width,v,low){
  const p=s.p,t=lifeClock(v,time);
+ if(PAINTERS[p.kind]){PAINTERS[p.kind].life(c,s,t,travel,width,low);return;}
  scenePositions(s,travel,width,x=>{
   if(p.kind==='neon'){
    if(v.variant===1){c.save();c.globalAlpha=.28;rect(c,x,57,72,208,'#101423');c.restore();}
