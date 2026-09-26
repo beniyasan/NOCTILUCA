@@ -4,6 +4,7 @@ import {tower,pagoda,dome,industry,gardenTree,sign,boulder,wreck,makeScene} from
 import {worlds,LIFE} from './worlds.js';
 import {createSceneGraph} from './scene.js';
 import {createCabin} from './cabin.js';
+import {createPassengers} from './passengers.js';
 import {createStationScene} from './station-scene.js';
 import {createSidequestSceneRenderer} from './sidequest-scenes.js';
 
@@ -29,7 +30,7 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 const state = {index:0,elapsed:0,time:0,travel:0,speed:1,paused:reducedMotion,auto:true,dwell:120,travelSeconds:null,transition:null,lap:1,immersive:false,sound:false,visitCounts:Array(worlds.length).fill(0),currentVisit:null,frames:0,stationStops:true,stopDuration:24,density:"normal",hints:true,stop:{phase:"arrive",t:0,held:false}};
 let W=900, activeScene=null, last=0, uiLast=0, resizeTimer=0, toastTimer=0, wakeTimer=0, volumeTimer=0;
 const thumbCache=new Map();
-const cabin=createCabin($('window'));let cabinAshore=false;
+const cabin=createCabin($('window')),passengers=createPassengers($('window'),cabin,{talk:ask=>gateway.passengerTalk?.(ask)||null});let cabinAshore=false;
 const districtJourney=createDistrictJourney();
 const bell=createArrivalBell(()=>gateway.snapshot.state.settings);
 let legElapsed=0,legDuration=null,legActive=false;
@@ -57,7 +58,13 @@ function journeyScenery(){
  const elapsed=(legDuration!==null?legElapsed:state.elapsed-routeStart)-routeDeparture;
  return routeScene(worlds[state.index].id,elapsed/Math.max(.1,budget),budget);
 }
-function arrivalNotice(){bell.ring();toast(worlds[state.index].station+'に到着しました。');}
+// Where the next passengers may sit: not behind the station panel shown while stopped.
+function passengerStop(){
+ const n=worlds.length,w=$('window').getBoundingClientRect(),panel=$('stop-status'),avoid=[];
+ if(!panel.hidden&&w.width){const b=panel.getBoundingClientRect();avoid.push([(b.left-w.left)/w.width,(b.right-w.left)/w.width]);}
+ return{station:worlds[state.index].station,world:worlds[state.index].name,next:worlds[(state.index+1)%n].name,avoid};
+}
+function arrivalNotice(){bell.ring();passengers.arrive(passengerStop());toast(worlds[state.index].station+'に到着しました。');}
 function visitSeed(index,count=0){return worlds[index].seed+count*971+index*131;}
 // PHASE 1.5 / ambient time is independent of train motion.
 // No economy, deadlines, offline simulation, or destructive world changes.
@@ -200,6 +207,7 @@ function render(dt){
    drawScene(ctx,activeScene,state.time,state.travel,W,true,{stop});
   }
  }
+ passengers.tick(state.paused?0:dt,state.time,{quiet:talk.isDirect||!$('overheard').hidden});
  state.frames++;
 }
 function updateWorldUI(){
@@ -270,6 +278,7 @@ function resize(){
  // The carriage frames the view; the scene canvas fills only the window band it leaves open.
  cabinAshore=gateway.snapshot.state.location?.mode==='station';
  const box=cabin.layout(b.width,b.height,!state.immersive&&!cabinAshore),view=box||{w:b.width,h:b.height};
+ passengers.layout(cabin.metrics);
  Object.assign(canvas.style,box?{left:box.x+'px',top:box.y+'px',width:box.w+'px',height:box.h+'px'}:{left:'',top:'',width:'',height:''});
  const newW=Math.max(160,Math.min(1800,Math.round(view.w/view.h*HEIGHT)));if(newW===W&&activeScene)return;
  W=newW;districtSurface.width=W;districtCtx.imageSmoothingEnabled=false;districtCache.clear();canvas.width=W;canvas.height=HEIGHT;blendSurface.width=W;blendSurface.height=HEIGHT;ctx.imageSmoothingEnabled=false;blendCtx.imageSmoothingEnabled=false;cache.clear();activeScene=getScene(state.index);if(state.transition)state.transition.next=getScene(state.transition.to);render(0);
@@ -327,6 +336,17 @@ document.addEventListener('pointerdown',()=>{if(gateway.snapshot.state.settings.
  document.addEventListener('keydown',()=>{if(gateway.snapshot.state.settings.arrivalBell)void bell.arm();});
 $('pause').addEventListener('click',togglePause);$('sound').addEventListener('click',()=>engine.openSoundSettings?.());$('sound').addEventListener('contextmenu',e=>{e.preventDefault();showVolume();});$('show-volume').addEventListener('click',()=>engine.openSoundSettings?.());$('volume').addEventListener('input',e=>{audio.setVolume(Number(e.target.value)/100);$('volume-value').textContent=e.target.value+'%';showVolume();});
 $('speed').addEventListener('click',()=>{const speeds=[.5,1,1.5,2];state.speed=speeds[(speeds.indexOf(state.speed)+1)%speeds.length];$('speed').textContent=state.speed.toFixed(1)+'×';$('speed').setAttribute('aria-label','速度を変更。現在'+state.speed+'倍');toast('車窓の速さ '+state.speed.toFixed(1)+'×');});
+// Headphones: a per-device preference, so it lives in this browser only.
+const HEADPHONES_KEY='noctiluca.headphones';
+function setHeadphones(on,announce=false){
+ passengers.setMuted(on);const b=$('headphones');b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));
+ b.setAttribute('aria-label',on?'ヘッドホンを外して、向かいの席の会話を聞く':'ヘッドホンをつけて、向かいの席の会話を聞こえなくする');
+ try{localStorage.setItem(HEADPHONES_KEY,on?'1':'0');}catch{/* private mode: this session only */}
+ if(announce)toast(on?'ヘッドホンをつけました。向かいの席の会話は聞こえません。':'ヘッドホンを外しました。');
+}
+let headphonesSaved=false;try{headphonesSaved=localStorage.getItem(HEADPHONES_KEY)==='1';}catch{/* unavailable */}
+setHeadphones(headphonesSaved);
+$('headphones').addEventListener('click',()=>setHeadphones(!passengers.muted,true));
 $('hide-ui').addEventListener('click',toggleImmersive);$('reveal').addEventListener('click',toggleImmersive);$('fullscreen').addEventListener('click',fullscreen);$('capture').addEventListener('click',postcard);$('open-map').addEventListener('click',openMap);$('close-map').addEventListener('click',()=>$('route-dialog').close());$('route-dialog').addEventListener('click',e=>{if(e.target===$('route-dialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
 $('auto-tour').addEventListener('change',e=>{state.auto=e.target.checked;if(state.auto){state.elapsed=0;beginLeg();}updateUI(true);});
 
@@ -347,7 +367,7 @@ $('app').addEventListener('pointermove',wake,{passive:true});$('window').addEven
 document.addEventListener('visibilitychange',()=>{last=0;if(audio.context){audio.updateLevel();if(document.hidden){setTimeout(()=>{if(document.hidden&&audio.context)audio.context.suspend().catch(()=>{});},900);}else if(audio.enabled){audio.context.resume().then(()=>audio.updateLevel()).catch(()=>{});}}});
 document.addEventListener('fullscreenchange',()=>{const on=!!document.fullscreenElement;$('fullscreen').setAttribute('aria-label',on?'全画面を終了':'全画面表示');resize();});
 // Non-mutating diagnostics are handy when extending the app in a local editor.
-Object.defineProperty(window,'NOCTILUCA',{value:Object.freeze({get status(){return{version:VERSION,world:worlds[state.index].name,index:state.index,paused:state.paused,auto:state.auto,speed:state.speed,elapsed:state.elapsed,time:state.time,travel:state.travel,frames:state.frames,station:{...getStopState()},visit:state.currentVisit?.count,variant:state.currentVisit?.variant,transition:state.transition?.to??null,dimensions:[W,HEIGHT],cachedScenes:cache.size,district:DISTRICTS[worlds[state.index].id][journeyScenery().to][0],cachedDistricts:districtCache.size,density:state.density,stationStops:state.stationStops,conversations:talk.status};},worlds:worlds.map(p=>Object.freeze({id:p.id,name:p.name}))}),writable:false});
+Object.defineProperty(window,'NOCTILUCA',{value:Object.freeze({get status(){return{version:VERSION,world:worlds[state.index].name,index:state.index,paused:state.paused,auto:state.auto,speed:state.speed,elapsed:state.elapsed,time:state.time,travel:state.travel,frames:state.frames,station:{...getStopState()},visit:state.currentVisit?.count,variant:state.currentVisit?.variant,transition:state.transition?.to??null,dimensions:[W,HEIGHT],cachedScenes:cache.size,district:DISTRICTS[worlds[state.index].id][journeyScenery().to][0],cachedDistricts:districtCache.size,density:state.density,stationStops:state.stationStops,conversations:talk.status,passengers:{...passengers.status,muted:passengers.muted}};},worlds:worlds.map(p=>Object.freeze({id:p.id,name:p.name}))}),writable:false});
 
 function notify(type,payload={}){
  gateway.send(type,payload).catch(e=>{state.stop.held=true;toast(e.message);});
@@ -400,7 +420,7 @@ const talk=createTalk(engine,gateway,catalog);
 state.index=Math.max(0,worlds.findIndex(w=>w.id===gateway.snapshot.state.location.world));
 state.visitCounts=worlds.map(w=>gateway.snapshot.state.visits[w.id]||0);
 enterWorld(state.index,false,buildVisit(state.index,Math.max(0,state.visitCounts[state.index]-1)));
-resize();talk.init();engine.apply(gateway.snapshot.state,true);
+resize();talk.init();engine.apply(gateway.snapshot.state,true);passengers.seed(passengerStop());
 if(!gateway.authenticated){state.stop={phase:'arrive',t:0,held:false};}
 const settings={'auto-tour':['auto','checked'],'station-stops':['stationStops','checked'],'stop-duration':['stopDuration','number'],'life-density':['density','value'],'ambient-hints':['hints','checked']};
 for(const [id,[field,kind]] of Object.entries(settings))$(id).addEventListener('change',e=>notify('settings.set',{[field]:kind==='checked'?e.target.checked:kind==='number'?Number(e.target.value):e.target.value}));

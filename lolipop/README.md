@@ -26,6 +26,28 @@ supabase functions deploy api --no-verify-jwt
 
 `SUPABASE_SERVICE_ROLE_KEY`と`BACKUP_SIGNING_KEY`はEdge FunctionのSecretsだけに置き、ロリポップへアップロードしません。
 
+## 向かいの席の乗客の会話(時事ネタ)
+
+車内の乗客の会話を、その日(日本時間)のニュース見出しからLLMで生成する。ロリポップ版のみの機能で、Site版は従来どおりテンプレート生成のみ。
+
+- その日最初のリクエストで、NHKのRSS(暮らし・科学文化・スポーツ)から見出しを取得し、GPT-6 Lunaでこの世界(サイバーパンクな宇宙の六つの星)の出来事に置き換えた会話をまとめて生成して `passenger_talks` に保存する。見出しの取得は1日1回。
+- 事件・事故・災害・政治などの見出しは、モデルへ渡す前に除外する。生成結果も文字数・話し手・禁止語を検証してから保存する。
+- 各プレイヤーはその日の会話を一周すると次のバッチを要求する。追加生成は同じ見出しから行い、1日の上限(既定3回)を超えない。
+- 生成はロックを取った1リクエストだけが行い、レスポンスを返した後にバックグラウンドで実行する。失敗時は10分間再試行しない。
+- 会話が無い間・取得に失敗した場合は、クライアントのテンプレート生成で代用する。
+
+設定(Supabase secrets):
+
+```sh
+supabase db push   # 0002_passenger_talk.sql を適用
+supabase secrets set OPENAI_API_KEY="sk-..."
+# 任意
+supabase secrets set PASSENGER_TALK_MODEL="gpt-6-luna" PASSENGER_TALK_MAX_BATCHES="3" \
+  PASSENGER_TALK_FEEDS="https://news.web.nhk/n-data/conf/na/rss/cat2.xml,https://news.web.nhk/n-data/conf/na/rss/cat7.xml"
+```
+
+`OPENAI_API_KEY`はEdge FunctionのSecretsだけに置く。未設定なら生成は行わず、常にテンプレートの会話になる。1日の費用は、見出し取得1回と生成最大3回分(GPT-6 Lunaで数円程度)が上限。
+
 ## 静的ビルド
 
 ```sh
