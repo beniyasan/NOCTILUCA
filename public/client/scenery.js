@@ -1,5 +1,6 @@
 import {createPlaceScenes} from './place-scenes.js';
 import {unit} from './anim-utils.js';
+import {frontier} from './frontier-scenes.js';
 // View-only districts. These never send commands or modify a player's world.
 export const DISTRICTS={
  kowloon:[['駅前の広告街','重なる看板と、小さな高架列車。'],['深夜の市場','重なる看板と濡れた窓。路地を譲り合い、湯気が換気口へ流れる。'],['運河沿い','建物が途切れ、水面に広告の灯りが伸びる。荷船が橋をくぐる。'],['屋上の住宅街','物干しと給水塔。換気扇のそばで、誰かが夜食をとっている。']],
@@ -7,7 +8,10 @@ export const DISTRICTS={
  pelagic:[['灯台の埠頭','浮体港の灯台が、入港する船を照らす。'],['外海の観測帯','水平線の手前で、船と浮桟橋が揺れる。水面の下を大きな影が渡る。'],['船の整備ドック','停泊船の側面を、整備台が上り下りしている。'],['養殖の入り江','丸い生け簀の間を、給餌艇が巡回する。']],
  gorge:[['岩棚の居住区','昇降機が、谷の上と下をつないでいる。'],['峡谷を渡る橋','手前の岩壁が途切れ、深い谷が開ける。吊られた荷が揺れながら橋を渡る。'],['段々の採石場','切り出した石が、斜面の搬送路を少しずつ下っていく。'],['崖沿いの集落','岩に沿った窓と通路。小さなリフトが生活の荷物を運ぶ。']],
  jade:[['段々温室','花のある温室と、庭師の作業場。'],['大樹の回廊','葉の奥に温室が見える。鳥が止まって枝がしなり、葉先から滴が落ちる。'],['苗の育成区','低い温室が並び、散水の列が奥から順に動く。'],['水庭のほとり','水を渡る細い橋。せせらぎと、ゆっくり動く手入れ舟。']],
- relay:[['中継環の周辺','無人の接続環で、いつもの点検が続く。'],['遠距離アンテナ群','暗い余白に受信皿が浮かぶ。信号灯が伝わり、点検機が止まって確かめる。'],['貨物の接続区','搬送ポッドが列を作り、一つずつ接続口へ入っていく。'],['外縁の集電翼','集電パネルが星へ角度を合わせる。点検機が枠をたどる。']]
+ relay:[['中継環の周辺','無人の接続環で、いつもの点検が続く。'],['遠距離アンテナ群','暗い余白に受信皿が浮かぶ。信号灯が伝わり、点検機が止まって確かめる。'],['貨物の接続区','搬送ポッドが列を作り、一つずつ接続口へ入っていく。'],['外縁の集電翼','集電パネルが星へ角度を合わせる。点検機が枠をたどる。']],
+ abyss:[['気密ドーム街','ドームを気密通路がつなぎ、配達カプセルが行き来する。'],['珊瑚の居住塔','珊瑚に覆われた塔。発光するイソギンチャクと、魚の群れ。'],['海溝の研究所','二つの岩棚の間に、暗い海溝が口を開ける。調査艇がケーブルで上下する。'],['昆布の水耕畑','昆布の列が潮になびく。収穫艇が畝の間をゆっくり進む。']],
+ caldera:[['溶岩運河の街','溶岩の運河を橋が渡り、荷車と職人が行き交う。'],['鋳造街','るつぼが梁を渡り、型へ赤い金属を注ぐ。火花が散る。'],['地熱発電の塔群','冷却塔が湯気を吐き、タービンが回り続ける。'],['火口縁の湯の町','段々の湯けむりと、揺れる提灯。宿の窓が暖かい。']],
+ aerie:[['浮島の駅前','吊り橋とゴンドラが、浮かぶ島々をつないでいる。'],['浮遊島の市場','小さな島ごとに屋台が並ぶ。風船がふわりと昇っていく。'],['風車の発電群','島の上で風車が回る。雲の上で凧が揺れている。'],['飛行船の港','係留塔に飛行船が寄り、荷を下ろす。']]
 };
 export function districtAt(distance,visit=0){
  const step=Math.floor((Math.max(0,distance)+14)/22)%4;
@@ -17,7 +21,8 @@ export function districtAt(distance,visit=0){
 // stay in each district, never the route order or the number of visits.
 export const ROUTES={
  kowloon:[0,1,3,2],scrap:[0,3,2,1],pelagic:[0,2,3,1],
- gorge:[0,3,2,1],jade:[0,2,1,3],relay:[0,2,1,3]
+ gorge:[0,3,2,1],jade:[0,2,1,3],relay:[0,2,1,3],
+ abyss:[0,1,3,2],caldera:[0,1,2,3],aerie:[0,2,1,3]
 };
 export function routeScene(world,progress,duration){
  const order=ROUTES[world],p=unit(progress),boundaries=[.10,.36,.67];
@@ -60,6 +65,7 @@ export function createDistrictRenderer(a){
  const places=createPlaceScenes(a);
  const {surface,rect,line,ellipse,poly,rand,ir,tower,pagoda,dome,industry,gardenTree,boulder,wreck,crate,sign,person,steam,drone,robot,rotatingFan,workCrane,shipBoat,drawRay,drawRelayRing,mod,shuttling}=a;
  function layer(p,depth,width,TILE,HEIGHT){
+  if(frontier.owns(p))return frontier.layer(p,depth,width);
   if(places.owns(p))return places.layer(p,depth,width,TILE,HEIGHT);
   const e=surface(TILE,HEIGHT),c=e.getContext('2d'),d=p.district;
   const pp=depth===0?{...p,mid:p.far,near:p.far,trim:p.trim}:p;
@@ -125,6 +131,7 @@ export function createDistrictRenderer(a){
   return e;
  }
  function life(c,s,clock,travel,width,quiet){
+  if(frontier.owns(s.p)){frontier.life(c,s,clock,travel,width,quiet);return;}
   if(places.owns(s.p)){places.life(c,s,clock,travel,width,quiet);return;}
   const p=s.p,d=p.district,start=-mod(travel*8.5,768);
   for(let x=start-768;x<width+768;x+=768){
@@ -156,5 +163,10 @@ export function createDistrictRenderer(a){
    }
   }
  }
- return {layer,life,owns:places.owns,sky:places.sky,background:places.background,foreground:places.foreground};
+ // The outer planets own every district, including the station front.
+ return {layer,life,
+  owns:p=>frontier.owns(p)||places.owns(p),
+  sky:(p,w,h)=>frontier.owns(p)?frontier.sky(p,w):places.sky(p,w,h),
+  background:(c,s,...rest)=>frontier.owns(s.p)?frontier.background(c,s,...rest):places.background(c,s,...rest),
+  foreground:(c,s,...rest)=>frontier.owns(s.p)?frontier.foreground(c,s,...rest):places.foreground(c,s,...rest)};
 }

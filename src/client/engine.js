@@ -18,6 +18,7 @@ import {PELAGIC_MOMENTS,createPelagicMomentRenderer} from './pelagic-moments.js'
 import {GORGE_MOMENTS,createGorgeMomentRenderer} from './gorge-moments.js';
 import {RELAY_MOMENTS,createRelayMomentRenderer} from './relay-moments.js';
 import {JADE_MOMENTS,createJadeMomentRenderer} from './jade-moments.js';
+import {ABYSS_MOMENTS,CALDERA_MOMENTS,AERIE_MOMENTS,createFrontierMomentRenderer} from './frontier-moments.js';
 import {DISTRICTS,createDistrictJourney,createDistrictRenderer,routeScene,approachScene,focusPassage} from './scenery.js';
 export function createEngine(gateway,catalog) {
 // NOCTILUCA: dependency-free, deterministic pixel-art renderer.
@@ -77,7 +78,10 @@ const pelagicDirector=createMomentDirector(PELAGIC_MOMENTS),pelagicRenderer=crea
 const gorgeDirector=createMomentDirector(GORGE_MOMENTS),gorgeRenderer=createGorgeMomentRenderer({rect,line,ellipse,poly,person,crate});
 const jadeDirector=createMomentDirector(JADE_MOMENTS),jadeRenderer=createJadeMomentRenderer({rect,line,ellipse,poly,person,crate});
 const relayDirector=createMomentDirector(RELAY_MOMENTS),relayRenderer=createRelayMomentRenderer({rect,line,ellipse,poly});
-const momentDirectors=[momentDirector,scrapDirector,pelagicDirector,gorgeDirector,jadeDirector,relayDirector];
+const frontierRenderer=createFrontierMomentRenderer();
+// Index-aligned with worlds: the outer planets follow Night Relay.
+const momentDirectors=[momentDirector,scrapDirector,pelagicDirector,gorgeDirector,jadeDirector,relayDirector,
+ createMomentDirector(ABYSS_MOMENTS),createMomentDirector(CALDERA_MOMENTS),createMomentDirector(AERIE_MOMENTS)];
 function buildVisit(index,count=0){
  const p=worlds[index],r=rand(visitSeed(index,count)),variant=mod(count,p.conditions.length),condition=p.conditions[variant];
  return {index,count,variant,condition,weather:condition.weather,note:LIFE[p.kind].note[variant],station:p.station,
@@ -258,7 +262,7 @@ const blendSurface=surface(1,HEIGHT),blendCtx=blendSurface.getContext('2d');
 const districtSurface=surface(1,HEIGHT),districtCtx=districtSurface.getContext('2d');
 
 const stationScene=createStationScene({state,gateway,momentDirector,momentRenderer,sidequestRenderer});
-const sceneGraph=createSceneGraph({state,gateway,getStopState,journeyScenery,buildVisit,momentDirectors,districtRenderer,sidequestRenderer,momentRenderer,scrapRenderer,pelagicRenderer,gorgeRenderer,jadeRenderer,relayRenderer,stationScene,districtSurface,districtCtx});
+const sceneGraph=createSceneGraph({state,gateway,getStopState,journeyScenery,buildVisit,momentDirectors,districtRenderer,sidequestRenderer,momentRenderer,scrapRenderer,pelagicRenderer,gorgeRenderer,jadeRenderer,relayRenderer,frontierRenderer,stationScene,districtSurface,districtCtx});
 const {cache,districtCache,drawScene}=sceneGraph,getScene=i=>sceneGraph.getScene(i,W);
 
 function tick(now){
