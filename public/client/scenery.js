@@ -39,8 +39,10 @@ export function routeScene(world,progress,duration,visit=0){
  }
  return {from:0,to:0,mix:1};
 }
-export function approachScene(world,progress){
- const outer=ROUTES[world][3],mix=unit((progress-.20)/.72);
+// Arriving comes in through the outer district of the same visit's route, the one the ride
+// out will leave by.
+export function approachScene(world,progress,visit=0){
+ const outer=routeOrder(world,visit)[3],mix=unit((progress-.20)/.72);
  return {from:mix===1?0:outer,to:mix===0?outer:0,mix:mix===0?1:mix};
 }
 export function focusPassage(total,remainingMs){

@@ -171,7 +171,7 @@ function drawCrossing(tr,phase){
  }
  if(t>4){
   const approach=(t-4)/3.8,scale=.88+.12*smooth(approach);
-  drawScene(blendCtx,tr.next,state.time,Math.max(0,t-4)*state.speed,W,true,{visit:tr.visit,scenic:approachScene(tr.next.p.id,approach),stop:{phase:'cruise',motion:1,overlay:0}});
+  drawScene(blendCtx,tr.next,state.time,Math.max(0,t-4)*state.speed,W,true,{visit:tr.visit,scenic:approachScene(tr.next.p.id,approach,tr.visit?.count||0),stop:{phase:'cruise',motion:1,overlay:0}});
   ctx.globalAlpha=smooth(approach);ctx.drawImage(blendSurface,(1-scale)*W/2,(1-scale)*HEIGHT/2,W*scale,HEIGHT*scale);ctx.globalAlpha=1;
  }
 }

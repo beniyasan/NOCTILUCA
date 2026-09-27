@@ -68,6 +68,8 @@ test('Kowloon rides out along a different street each visit, all eight districts
   order.forEach(d=>used.add(d));
  });
  assert.deepEqual([...used].sort(),[0,1,2,3,4,5,6,7]);
+ // Arriving in Kowloon comes in through the same outer district the visit's ride out leaves by.
+ ROUTE_VARIANTS.kowloon.forEach((order,visit)=>{assert.equal(approachScene('kowloon',0,visit).to,order[3]);assert.deepEqual(approachScene('kowloon',1,visit),{from:0,to:0,mix:1});});
  // Other worlds keep their single fixed route.
  assert.deepEqual(routeOrder('scrap',5),ROUTES.scrap);
  // Free cruising ("この星を、ずっと") also reaches the new districts over visits.
