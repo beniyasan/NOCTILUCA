@@ -8,6 +8,7 @@
 - `supabase/migrations/0001_lolipop_initial.sql`: 専用PostgreSQLスキーマ
 - `supabase/migrations/0004_work_journals.sql`: 作業日誌
 - `supabase/migrations/0005_journal_ai_runs.sql`: 作業日誌のAI整理の利用回数
+- `supabase/migrations/0006_notion_connections.sql`: Notion連携
 - `supabase/functions/api/`: JWT検証、ゲームルール、保存API
 - `scripts/sync-lolipop.mjs`: ゲームルールとコンテンツをEdge Functionへ同期
 - `scripts/build-lolipop.mjs`: 静的配信用ビルドを作成
@@ -86,6 +87,27 @@ supabase functions deploy api --no-verify-jwt
 # 任意
 supabase secrets set JOURNAL_AI_MODEL="gpt-6-luna" JOURNAL_AI_DAILY_LIMIT="3"
 ```
+
+## Notion連携
+
+ログインしたプレイヤーが、自分のNotionのタスク用データベースとつなげる(ロリポップ版のみ)。Notionの公開コネクション(OAuth)を使う。
+
+- 「集中する」の画面の「Notionと連携」から、Notionの許可画面へ移る。プレイヤーは使うページやデータベースを選んで許可する。
+- Notionは `/api/notion/callback` へ戻す。このリクエストにはログイン情報が無いため、`NOTION_TOKEN_KEY` で署名した10分間有効の `state` でプレイヤーを特定する。
+- 受け取ったトークンは `NOTION_TOKEN_KEY` から作った鍵でAES-GCM暗号化して `notion_connections` に保存する。ブラウザには渡さない。期限切れ(401)なら一度だけ更新して保存し直す。
+- 連携後、タスクのデータベースと「完了」を表す列(チェックボックス、またはステータスとその完了の選択肢)を選ぶ。保存前に実際の列と照合する。
+- 「連携を解除」でNotion側のトークンも取り消し(失敗しても)、保存している連携情報を削除する。
+- APIのバージョンは `2026-03-11`。直近のNotionのエラーは `notion_connections.last_error` に残る。
+
+Notionの開発者ポータル(https://app.notion.com/developers/connections)でPublic connectionを作り、リダイレクトURIに `https://<project>.supabase.co/functions/v1/api/notion/callback`、インストール範囲に「Any workspace」、権限に読み取り・更新・挿入を設定する。
+
+```sh
+supabase db push   # 0006_notion_connections.sql を適用
+supabase secrets set NOTION_CLIENT_ID="..." NOTION_CLIENT_SECRET="..." NOTION_TOKEN_KEY="$(openssl rand -base64 32)"
+supabase functions deploy api --no-verify-jwt
+```
+
+`NOTION_TOKEN_KEY` を変えると保存済みの連携が開けなくなるため、変えた場合は各プレイヤーに連携しなおしてもらう。
 
 ## 静的ビルド
 

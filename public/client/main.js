@@ -2,6 +2,7 @@ import {createSidequestsUI} from './sidequests-ui.js';
 import {createMusicUI} from './music-ui.js';
 import {createTimerUI} from './timer-ui.js';
 import {createJournalUI} from './journal-ui.js';
+import {createNotionUI} from './notion-ui.js';
 import {createStoryUI} from './story-ui.js';
 import {createCommerceUI} from './commerce-ui.js';
 import {Gateway} from './gateway.js';
@@ -13,6 +14,7 @@ try{
  const engine=createEngine(gateway,await r.json());
  createJourneyUI(gateway,engine);
  engine.journal=createJournalUI(gateway);
+  engine.notion=createNotionUI(gateway);
   createTimerUI(engine,gateway);
  engine.music=createMusicUI(engine,gateway);
  engine.commerce=createCommerceUI(gateway,engine);

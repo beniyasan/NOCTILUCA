@@ -4,6 +4,7 @@ import data from "./game/content.js";
 import { DEFAULT_FEEDS, filterHeadlines, jstDay, parseFeed, responseText, sanitizeTalks, talkRequest } from "./passenger-talk.js";
 import { JOURNAL_LIMITS, journalCommand, journalDay, journalSummary, journalView } from "./journal.js";
 import { journalAiInput, journalAiRequest, journalAiText } from "./journal-ai.js";
+import { NOTION_API, NOTION_VERSION, authorizeUrl, checkMapping, connectionView, openTokens, plain, sealTokens, signState, summarizeSource, verifyState } from "./notion.js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 const enc = new TextEncoder();
@@ -208,13 +209,125 @@ async function journalRoute(request: Request, url: URL, db: SupabaseClient, play
   return { today, deleted: true };
 }
 
+// ---- Notion connection: each player links their own workspace (public connection, OAuth) ----
+const notionClientId = env.NOTION_CLIENT_ID || "", notionClientSecret = env.NOTION_CLIENT_SECRET || "", notionKey = env.NOTION_TOKEN_KEY || "";
+const notionReady = () => !!(notionClientId && notionClientSecret && notionKey.length >= 32);
+const notionRedirect = () => env.NOTION_REDIRECT_URI || `${supabaseUrl}/functions/v1/api/notion/callback`;
+const notionBasic = () => `Basic ${btoa(`${notionClientId}:${notionClientSecret}`)}`;
+const notionColumns = "player_id,tokens,bot_id,workspace_id,workspace_name,data_source_id,data_source_name,title_property,done_property,done_property_name,done_type,done_option,done_option_name";
+type NotionRow = Record<string, string | null>;
+async function notionTokenRequest(body: Record<string, string>) {
+  const r = await timed(`${NOTION_API}/oauth/token`, { method: "POST", headers: { "content-type": "application/json", accept: "application/json", authorization: notionBasic() }, body: JSON.stringify(body) }, 15000);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.access_token) throw new Error(`NOTION_TOKEN_${r.status} ${String(data.error || "").slice(0, 80)}`);
+  return data;
+}
+// Notion sends the browser back here (no login header): the signed state says who it was.
+async function notionCallback(url: URL) {
+  if (!origin) throw new Error("LOLIPOP_ORIGIN is not configured");
+  const back = (result: string) => new Response(null, { status: 302, headers: { location: `${origin}/#notion=${result}`, "cache-control": "no-store" } });
+  if (!notionReady()) return back("unavailable");
+  const playerId = await verifyState(url.searchParams.get("state"), notionKey);
+  if (!playerId) return back("expired");
+  if (url.searchParams.get("error")) return back("denied");
+  const code = url.searchParams.get("code");
+  if (!code) return back("error");
+  try {
+    const t = await notionTokenRequest({ grant_type: "authorization_code", code, redirect_uri: notionRedirect() });
+    const db = admin(), now = new Date().toISOString();
+    const previous = await db.from("notion_connections").select("workspace_id").eq("player_id", playerId).maybeSingle();
+    if (previous.error) throw previous.error;
+    // Reconnecting to the same workspace (e.g. to share more pages) keeps the chosen database.
+    const keep = previous.data?.workspace_id === t.workspace_id;
+    const row: Record<string, unknown> = { player_id: playerId, tokens: await sealTokens({ access: t.access_token, refresh: t.refresh_token }, notionKey), bot_id: String(t.bot_id), workspace_id: String(t.workspace_id), workspace_name: String(t.workspace_name || "").slice(0, 200), last_error: null, updated_at: now };
+    if (!keep) Object.assign(row, { connected_at: now, data_source_id: null, data_source_name: null, title_property: null, done_property: null, done_property_name: null, done_type: null, done_option: null, done_option_name: null });
+    const saved = await db.from("notion_connections").upsert(row, { onConflict: "player_id" });
+    if (saved.error) throw saved.error;
+    return back("connected");
+  } catch (error) {
+    console.error("NOCTILUCA_NOTION_CONNECT_FAILED", error instanceof Error ? error.message : "unknown");
+    return back("error");
+  }
+}
+// Calls the Notion API as the player; an expired access token is refreshed once and saved.
+async function notionFetch(db: SupabaseClient, row: NotionRow, path: string, init: RequestInit = {}) {
+  let tokens = await openTokens(row.tokens, notionKey);
+  const call = () => timed(`${NOTION_API}${path}`, { ...init, headers: { authorization: `Bearer ${tokens.access}`, "notion-version": NOTION_VERSION, "content-type": "application/json", ...(init.headers || {}) } }, 15000);
+  let r = await call();
+  if (r.status === 401) {
+    try {
+      const t = await notionTokenRequest({ grant_type: "refresh_token", refresh_token: tokens.refresh });
+      tokens = { access: t.access_token, refresh: t.refresh_token };
+      const saved = await db.from("notion_connections").update({ tokens: await sealTokens(tokens, notionKey), updated_at: new Date().toISOString() }).eq("player_id", row.player_id);
+      if (saved.error) throw saved.error;
+    } catch {
+      fail("NOTION_REAUTH", "Notionとの連携が切れました。もう一度連携してください。", 401);
+    }
+    r = await call();
+  }
+  const data = await r.json().catch(() => ({}));
+  if (r.ok) return data;
+  await db.from("notion_connections").update({ last_error: `${r.status} ${String(data.code || "")} ${String(data.message || "").slice(0, 300)}` }).eq("player_id", row.player_id);
+  if (r.status === 401 || r.status === 403) fail("NOTION_REAUTH", "Notionとの連携が切れました。もう一度連携してください。", 401);
+  if (r.status === 404) fail("NOTION_NOT_FOUND", "Notionのデータベースが見つかりません。連携しなおして、使うデータベースを共有してください。", 404);
+  if (r.status === 429) fail("NOTION_BUSY", "Notionが混み合っています。少し待ってからお試しください。", 429);
+  fail("NOTION_FAILED", "Notionとやりとりできませんでした。少し時間をおいてお試しください。", 502);
+}
+const notionId = (value: unknown) => typeof value === "string" && /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(value);
+async function notionRoute(request: Request, url: URL, db: SupabaseClient, playerId: string) {
+  const path = url.pathname, found = await db.from("notion_connections").select(notionColumns).eq("player_id", playerId).maybeSingle();
+  if (found.error) throw found.error;
+  const row = found.data as NotionRow | null;
+  if (request.method === "GET" && path.endsWith("/notion/status")) return connectionView(row, notionReady());
+  if (request.method === "GET" && path.endsWith("/notion/sources")) {
+    if (!row) fail("NOTION_NOT_CONNECTED", "Notionと連携していません。", 409);
+    const data = await notionFetch(db, row, "/search", { method: "POST", body: JSON.stringify({ filter: { property: "object", value: "data_source" }, page_size: 50 }) });
+    return { sources: (data.results || []).filter((s: { in_trash?: boolean }) => !s.in_trash).map((s: { id: string; title?: unknown }) => ({ id: s.id, name: plain(s.title) || "無題のデータベース" })) };
+  }
+  if (request.method === "GET" && path.endsWith("/notion/source")) {
+    const id = url.searchParams.get("id");
+    if (!row) fail("NOTION_NOT_CONNECTED", "Notionと連携していません。", 409);
+    if (!notionId(id)) fail("BAD_INPUT", "データベースを選んでください。");
+    return summarizeSource(await notionFetch(db, row, `/data_sources/${id}`));
+  }
+  if (request.method !== "POST") return null;
+  if (request.headers.get("x-noctiluca-client") !== "1") fail("CSRF", "この画面から操作をやり直してください。", 403);
+  if (path.endsWith("/notion/start")) {
+    if (!notionReady()) fail("NOTION_UNAVAILABLE", "Notion連携は、いまは使えません。", 503);
+    return { url: authorizeUrl({ clientId: notionClientId, redirectUri: notionRedirect(), state: await signState(playerId, notionKey) }) };
+  }
+  if (path.endsWith("/notion/configure")) {
+    if (!row) fail("NOTION_NOT_CONNECTED", "Notionと連携していません。", 409);
+    const input = await body(request);
+    exactKeys(input, ["dataSourceId", "doneProperty", "doneOption"]);
+    const { dataSourceId, doneProperty, doneOption } = input as Record<string, unknown>;
+    if (!notionId(dataSourceId) || typeof doneProperty !== "string" || (doneOption !== undefined && typeof doneOption !== "string")) fail("BAD_INPUT", "データベースと列を選んでください。");
+    const mapping = checkMapping(summarizeSource(await notionFetch(db, row, `/data_sources/${dataSourceId}`)), { doneProperty, doneOption: doneOption as string | undefined });
+    const saved = await db.from("notion_connections").update({ ...mapping, last_error: null, updated_at: new Date().toISOString() }).eq("player_id", playerId).select(notionColumns).single();
+    if (saved.error) throw saved.error;
+    return connectionView(saved.data as NotionRow, notionReady());
+  }
+  if (path.endsWith("/notion/disconnect")) {
+    if (row) {
+      // Revoke on Notion's side too; if that fails the stored tokens are still deleted.
+      try { const tokens = await openTokens(row.tokens, notionKey); await timed(`${NOTION_API}/oauth/revoke`, { method: "POST", headers: { "content-type": "application/json", authorization: notionBasic() }, body: JSON.stringify({ token: tokens.access }) }, 10000); } catch { /* best effort */ }
+      const removed = await db.from("notion_connections").delete().eq("player_id", playerId);
+      if (removed.error) throw removed.error;
+    }
+    return connectionView(null, notionReady());
+  }
+  return null;
+}
+
 async function handle(request: Request) {
   const url = new URL(request.url); if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors() });
+  if (request.method === "GET" && url.pathname.endsWith("/notion/callback")) return await notionCallback(url);
   const currentUser = await user(request); if (url.pathname.endsWith("/catalog")) return response({ worlds: WORLDS, topics: data.topics, people: data.npcs.map(({ id, name, role, en, where, detail, coat, hat, world }) => ({ id, name, role, en, where, detail, coat, hat, world })) }, 200, cors());
   if (request.method === "GET" && url.pathname.endsWith("/passenger-talk")) return response(await passengerTalk(url), 200, cors());
   if (!currentUser && url.pathname.endsWith("/session")) return response({ authenticated: false, mode: "supabase" }, 200, cors());
   if (!currentUser) return response({ error: { code: "LOGIN_REQUIRED", message: "旅を保存するにはログインしてください。" } }, 401, cors());
   const db = admin(); const row = await journey(db, currentUser.id); const owner = currentUser.id;
+  if (url.pathname.includes("/notion/")) { const result = await notionRoute(request, url, db, owner); if (result) return response(result, 200, cors()); }
   if (url.pathname.includes("/journal")) { const journal = await journalRoute(request, url, db, owner); if (journal) return response(journal, 200, cors()); }
   if (request.method === "GET" && url.pathname.endsWith("/session")) return response({ authenticated: true, mode: "supabase", ...envelope(row) }, 200, cors());
   if (request.method === "GET" && url.pathname.endsWith("/export")) return response(await backup(row, owner), 200, { ...cors(), "content-disposition": "attachment; filename=\"noctiluca-journey.json\"" });
