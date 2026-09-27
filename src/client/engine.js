@@ -203,7 +203,7 @@ function render(dt){
  }else{
   const work=focusRoute();
   if(work&&work.crossing!==null){
-   if(!focusPreview||focusPreview.from!==state.index){const to=(state.index+1)%worlds.length;focusPreview={from:state.index,to,next:getScene(to),visit:buildVisit(to,state.visitCounts[to]),fromStop:{phase:'cruise',motion:1,overlay:0},fromScenic:routeScene(worlds[state.index].id,1,work.duration)};}
+   if(!focusPreview||focusPreview.from!==state.index){const to=(state.index+1)%worlds.length;focusPreview={from:state.index,to,next:getScene(to),visit:buildVisit(to,state.visitCounts[to]),fromStop:{phase:'cruise',motion:1,overlay:0},fromScenic:routeScene(worlds[state.index].id,1,work.duration,state.currentVisit?.count||0)};}
    drawCrossing(focusPreview,work.crossing);
   }else{
    focusPreview=null;

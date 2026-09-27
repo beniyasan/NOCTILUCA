@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createFocusClock,formatTime} from '../../src/client/focus-clock.js';
@@ -70,6 +71,11 @@ test('Kowloon rides out along a different street each visit, all eight districts
  assert.deepEqual([...used].sort(),[0,1,2,3,4,5,6,7]);
  // Arriving in Kowloon comes in through the same outer district the visit's ride out leaves by.
  ROUTE_VARIANTS.kowloon.forEach((order,visit)=>{assert.equal(approachScene('kowloon',0,visit).to,order[3]);assert.deepEqual(approachScene('kowloon',1,visit),{from:0,to:0,mix:1});});
+ // Every place the engine asks for a route passes the visit, so no view falls back to the first order.
+ const engine=readFileSync('src/client/engine.js','utf8');
+ const calls=engine.split('routeScene(').slice(1).map(rest=>rest.slice(0,rest.search(/;|\n/)));
+ assert.equal(calls.length,3);for(const call of calls)assert.match(call,/state\.currentVisit\?\.count\|\|0\)/,call);
+ assert.match(engine,/approachScene\(tr\.next\.p\.id,approach,tr\.visit\?\.count\|\|0\)/);
  // Other worlds keep their single fixed route.
  assert.deepEqual(routeOrder('scrap',5),ROUTES.scrap);
  // Free cruising ("この星を、ずっと") also reaches the new districts over visits.
