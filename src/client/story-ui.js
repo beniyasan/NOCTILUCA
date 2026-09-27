@@ -11,6 +11,7 @@ export function createStoryUI(g,engine){
   observation.hidden=!(s.location.atStation&&!engine.state.transition&&(fourth||third||(c2?.unlocked&&s.location.world==='gorge'&&(c2.delivery==='installed'||c2.decision==='declined'))));
   observation.textContent=(fourth?c4.scene:third?c3.scene:c2?.scene)||'';
   $('story-hint').textContent=error||s.journeyHint;$('story-hint').hidden=!s.settings.hints;
+  renderSteps(s,v);
   const b=$('story-open');b.hidden=v.introSeen&&!v.ready&&!v.finalReady&&!v.active;
   b.textContent=v.active?'帳面の続きを開く':v.finalReady?'「次の便で」の帳面を開く':v.ready?'ひと箱ぶんの帳面を開く':'最初の帳面を開く';
   b.disabled=busy||g.busy||g.blocked||s.suspended||!s.displayName||!!engine.state.transition||s.location.world!=='kowloon';
@@ -29,6 +30,22 @@ export function createStoryUI(g,engine){
   }else {lastPageKey='';if(dialog.open)dialog.close();}
  }
  const introPlace=s=>s.location.world==='kowloon'&&s.location.atStation;
+ // Chapter one as a short checklist, read from the save: who has been asked, what is aboard, where it went.
+ let drawnSteps='';
+ function renderSteps(s,v){
+  const box=$('story-steps');if(!box)return;
+  const c=s.commerce||{},buyer=c.firstBuyer,show=!!v.introSeen&&!v.endingSeen&&s.settings.hints;box.hidden=!show;if(!show)return;
+  const steps=[
+   ['メイに「商売の話を聞く」',!!c.known?.mei],
+   ['レンに「商売の話を聞く」',!!c.known?.ren],
+   ['スクラップ・ベルトで電源を仕入れる',!!c.cargo||!!buyer],
+   ['メイかレン、どちらかに届ける',!!buyer],
+   ['別の星をまわり、九龍で使われ方を確かめる',!!buyer&&!!c.followup?.observed],
+  ];
+  const key=JSON.stringify(steps);if(key===drawnSteps)return;drawnSteps=key;
+  const next=steps.findIndex(([,done])=>!done);
+  $('story-steps-list').replaceChildren(...steps.map(([text,done],i)=>{const li=node('li',done?'done':i===next?'next':'',text);li.setAttribute('aria-label',text+(done?'（済み）':i===next?'（次にやること）':''));return li;}));
+ }
  async function start(){
   if(engine.state.transition)throw new Error('次の駅に着いてから、帳面を開けます。');
   engine.talk.close();engine.setHeld();

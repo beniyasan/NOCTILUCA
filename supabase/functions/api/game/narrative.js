@@ -76,8 +76,8 @@ export function journeyHint(s){
  if(n.endingSeen)return s.chapterThree.returnHeard?chapterFourHint(s):s.chapterTwo.resultHeard?chapterThreeHint(s):chapterTwoHint(s);
  if(c.followup.resultHeard)return '九龍の列車に戻り、窓際でひと箱ぶんの帳面を開く。';
  if(!c.firstBuyer){
-  if(!c.known.mei||!c.known.ren)return '九龍で下車し、メイとレンに「商売の話」を聞く。';
-  return c.cargo?'電源を九龍へ。商売帳から、用途の合う相手に売る。':'航路図でスクラップ・ベルトへ。オルに商売の話を聞き、商売帳で仕入れる。';
+  if(!c.known.mei||!c.known.ren)return '九龍で「下車する」、メイとレンに「商売の話を聞く」。';
+  return c.cargo?'電源を九龍へ。商売帳から、用途の合う相手に売る。':'「路線図」でスクラップ・ベルトへ。オルに「商売の話を聞く」、商売帳で仕入れる。';
  }
  const f=c.followup;
  if(c.installations[c.firstBuyer]==='pending')return '別の星を訪れて九龍へ戻る。運んだ電源が使われ始める。';

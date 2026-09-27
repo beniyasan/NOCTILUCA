@@ -365,7 +365,8 @@ $('ambient-hints').addEventListener('change',e=>{state.hints=e.target.checked;up
 
 worlds.forEach((p,i)=>{const b=document.createElement('button');b.className='rail-point';b.textContent=String(i+1).padStart(2,'0');b.title=p.name;b.setAttribute('aria-label',p.name+'へ移動');b.addEventListener('click',()=>startTransition(i));$('rail-map').appendChild(b);});
 document.addEventListener('keydown',e=>{
- if(e.ctrlKey||e.metaKey||e.altKey)return;const tag=e.target.tagName;if(e.target.closest('#timer-overlay'))return;if(['INPUT','SELECT','TEXTAREA'].includes(tag))return;if(document.querySelector('dialog[open]'))return;
+ // Journey shortcuts wait for the first-visit opening to finish (Esc skips it; see opening-ui).
+ if(e.ctrlKey||e.metaKey||e.altKey||document.body.classList.contains('opening-on'))return;const tag=e.target.tagName;if(e.target.closest('#timer-overlay'))return;if(['INPUT','SELECT','TEXTAREA'].includes(tag))return;if(document.querySelector('dialog[open]'))return;
  if(e.code==='Space'&&tag!=='BUTTON'){e.preventDefault();togglePause();}
  else if(e.key.toLowerCase()==='s')stationAction();else if(e.key.toLowerCase()==='h')toggleImmersive();else if(e.key.toLowerCase()==='m')audio.toggle();else if(e.key.toLowerCase()==='f')fullscreen();else if(e.key.toLowerCase()==='p')postcard();else if(e.key==='ArrowRight'){e.preventDefault();startTransition((state.index+1)%worlds.length);}else if(e.key==='ArrowLeft'){e.preventDefault();startTransition((state.index+worlds.length-1)%worlds.length);}else if(e.key==='Escape'&&state.immersive)toggleImmersive();
 });
@@ -398,6 +399,12 @@ const engine={
   state.travel=3.8*state.speed;arrivalNotice();render(0);updateUI(true);
  },
  setHeld(){state.stop.held=true;},
+ // First-visit opening: the view rolls toward the Kowloon platform while the lines play, then
+ // pulls in and stays (the first page of the notebook opens there). Visual only: the saved
+ // journey is already at this station, so nothing is sent.
+ // With reduced motion the view stays still at the platform and only the lines show.
+ beginOpening(){if(reducedMotion){state.stop={phase:'stop',t:0,held:true};updateUI(true);return;}state.stop={phase:'cruise',t:0,held:false};state.paused=false;state.elapsed=0;legActive=false;syncPause();updateUI(true);},
+ endOpening(immediate=false){if(state.stop.phase!=='cruise')return;state.stop=immediate?{phase:'stop',t:0,held:true}:{phase:'arrive',t:0,held:true};updateUI(true);},
  // Leave the platform right away (the welcome card shows a journey under way, not a wait).
  startMoving(){
   const s=gateway.snapshot.state;if(!s.displayName||s.narrative?.active||s.location.mode==='station'||s.suspended||gateway.blocked||!['stop','arrive'].includes(state.stop.phase))return;
