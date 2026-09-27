@@ -226,12 +226,24 @@ export function createPlaceScenes(a){
     line(c,xx+2,82+k*4,xx-23,223,'#b19a7a44');
    }
    for(let k=0;k<4;k++)line(c,x+10,145+k*55,x+490,170+k*47,'#514850',2);
-   rect(c,x+34,302,187,78,'#292d35');
-   for(let k=0;k<3;k++){
-    rect(c,x+45+k*56,325,37,51,'#101c29');rect(c,x+50+k*56,333,27,20,p.light+'88');
-    line(c,x+63+k*56,333,x+63+k*56,354,p.near,2);
+   // Each of the three hulls in a tile holds something different (shop, engine bay, bunks).
+   const bi=Math.round(mod(x,TILE)/768)%3;
+   if(bi===1){
+    for(const cx of [150,330]){line(c,x+cx,110,x+cx,240,'#8a8078',2);rect(c,x+cx-34,240,68,44,'#3a3f48');ellipse(c,x+cx,262,16,16,'#1d232c');ellipse(c,x+cx,262,10,10,'#5c6670');}
+    rect(c,x+60,340,300,8,'#6a5a4a');for(let k=0;k<5;k++)rect(c,x+80+k*56,348,6,32,'#3a3f48');
+    sign(c,x+49,307,85,14,p,r,false,'BAY / 07');
+   }else if(bi===2){
+    for(let j=0;j<3;j++)for(let k=0;k<3;k++){const bx=x+60+k*110,by=250+j*42;rect(c,bx,by,90,30,'#262a33');rect(c,bx+4,by+4,82,20,(j+k)%2?p.light+'66':'#a3b6bc33');rect(c,bx,by+30,90,3,p.trim);}
+    line(c,x+40,236,x+420,244,p.trim);for(let k=0;k<8;k++)rect(c,x+60+k*44,238+k,14,18,k%2?'#aa8e86':'#678c92');
+    sign(c,x+49,210,85,14,p,r,false,'BUNK / 12');
+   }else{
+    rect(c,x+34,302,187,78,'#292d35');
+    for(let k=0;k<3;k++){
+     rect(c,x+45+k*56,325,37,51,'#101c29');rect(c,x+50+k*56,333,27,20,p.light+'88');
+     line(c,x+63+k*56,333,x+63+k*56,354,p.near,2);
+    }
+    sign(c,x+49,307,85,14,p,r,false,'HULL / 04');
    }
-   sign(c,x+49,307,85,14,p,r,false,'HULL / 04');
    rect(c,x-30,380,562,9,p.trim);rect(c,x-27,389,559,13,p.near);
    for(let k=0;k<22;k++)line(c,x-20+k*25,381,x-14+k*25,387,'#c6a07677',2);
    // Gantry is bolted to the hull floor, not suspended in empty space.
