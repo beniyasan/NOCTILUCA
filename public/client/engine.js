@@ -48,7 +48,7 @@ function scenicStop(work=focusRoute()){
 function journeyScenery(){
  if(state.transition?.fromScenic)return state.transition.fromScenic;
  const work=focusRoute();
- if(work)return routeScene(worlds[state.index].id,work.progress,work.duration);
+ if(work)return routeScene(worlds[state.index].id,work.progress,work.duration,state.currentVisit?.count||0);
  const stop=getStopState();
  if(stop.overlay){
   if(stop.phase==='arrive'&&stop.fromDistrict!==undefined){const mix=clamp(stop.t/3,0,1);return {from:mix===1?0:stop.fromDistrict,to:0,mix};}
@@ -57,7 +57,7 @@ function journeyScenery(){
  if(!state.auto)return districtJourney.view;
  const budget=(legDuration!==null?legDuration-7.8-(state.stationStops?6:0):state.dwell-routeStart)-routeDeparture;
  const elapsed=(legDuration!==null?legElapsed:state.elapsed-routeStart)-routeDeparture;
- return routeScene(worlds[state.index].id,elapsed/Math.max(.1,budget),budget);
+ return routeScene(worlds[state.index].id,elapsed/Math.max(.1,budget),budget,state.currentVisit?.count||0);
 }
 // Where the next passengers may sit: not behind the station panel shown while stopped.
 function passengerStop(){
@@ -171,7 +171,7 @@ function drawCrossing(tr,phase){
  }
  if(t>4){
   const approach=(t-4)/3.8,scale=.88+.12*smooth(approach);
-  drawScene(blendCtx,tr.next,state.time,Math.max(0,t-4)*state.speed,W,true,{visit:tr.visit,scenic:approachScene(tr.next.p.id,approach),stop:{phase:'cruise',motion:1,overlay:0}});
+  drawScene(blendCtx,tr.next,state.time,Math.max(0,t-4)*state.speed,W,true,{visit:tr.visit,scenic:approachScene(tr.next.p.id,approach,tr.visit?.count||0),stop:{phase:'cruise',motion:1,overlay:0}});
   ctx.globalAlpha=smooth(approach);ctx.drawImage(blendSurface,(1-scale)*W/2,(1-scale)*HEIGHT/2,W*scale,HEIGHT*scale);ctx.globalAlpha=1;
  }
 }
@@ -185,7 +185,7 @@ function render(dt){
    if(legActive&&!stop.held&&stop.phase!=='stop')legElapsed+=dt;
    if(!stop.held)state.elapsed+=dt;
    advanceStation(dt);
-   if(!state.auto&&!engine.timer?.active)districtJourney.advance(dt,stop.phase==='cruise'&&!stop.held?state.speed*stop.motion:0,state.currentVisit.count,!!getStopState().overlay);
+   if(!state.auto&&!engine.timer?.active)districtJourney.advance(dt,stop.phase==='cruise'&&!stop.held?state.speed*stop.motion:0,state.currentVisit.count,!!getStopState().overlay,DISTRICTS[worlds[state.index].id].length-1);
    if(!engine.timer?.active&&state.auto&&(legDuration!==null?legActive&&legElapsed>=legDuration-7.8-(state.stationStops?6:0):state.elapsed>=state.dwell)&&state.stop.phase==='cruise'&&canMove())startTransition((state.index+1)%worlds.length,false);
   }
   if(momentDirectors[state.index]){
@@ -203,7 +203,7 @@ function render(dt){
  }else{
   const work=focusRoute();
   if(work&&work.crossing!==null){
-   if(!focusPreview||focusPreview.from!==state.index){const to=(state.index+1)%worlds.length;focusPreview={from:state.index,to,next:getScene(to),visit:buildVisit(to,state.visitCounts[to]),fromStop:{phase:'cruise',motion:1,overlay:0},fromScenic:routeScene(worlds[state.index].id,1,work.duration)};}
+   if(!focusPreview||focusPreview.from!==state.index){const to=(state.index+1)%worlds.length;focusPreview={from:state.index,to,next:getScene(to),visit:buildVisit(to,state.visitCounts[to]),fromStop:{phase:'cruise',motion:1,overlay:0},fromScenic:routeScene(worlds[state.index].id,1,work.duration,state.currentVisit?.count||0)};}
    drawCrossing(focusPreview,work.crossing);
   }else{
    focusPreview=null;

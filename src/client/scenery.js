@@ -1,9 +1,10 @@
 import {createPlaceScenes} from './place-scenes.js';
 import {unit} from './anim-utils.js';
 import {frontier} from './frontier-scenes.js';
+import {KOWLOON_EXTRA,createKowloonDistricts} from './kowloon-districts.js';
 // View-only districts. These never send commands or modify a player's world.
 export const DISTRICTS={
- kowloon:[['駅前の広告街','重なる看板と、小さな高架列車。'],['深夜の市場','重なる看板と濡れた窓。路地を譲り合い、湯気が換気口へ流れる。'],['運河沿い','建物が途切れ、水面に広告の灯りが伸びる。荷船が橋をくぐる。'],['屋上の住宅街','物干しと給水塔。換気扇のそばで、誰かが夜食をとっている。']],
+ kowloon:[['駅前の広告街','重なる看板と、小さな高架列車。'],['深夜の市場','重なる看板と濡れた窓。路地を譲り合い、湯気が換気口へ流れる。'],['運河沿い','建物が途切れ、水面に広告の灯りが伸びる。荷船が橋をくぐる。'],['屋上の住宅街','物干しと給水塔。換気扇のそばで、誰かが夜食をとっている。'],...KOWLOON_EXTRA],
  scrap:[['船底の工房街','回収船の骨組みに、工房の明かりが残る。'],['廃船の泊地','船殻の内側に小さな工房。クレーンが荷をつかみ、ゆっくり持ち上げる。'],['資材の選別場','ベルトが部品を運び、クレーンが次の箱を持ち上げる。'],['機関の修理区','外された推進機。作業灯の下で、試運転と手入れが続く。']],
  pelagic:[['灯台の埠頭','浮体港の灯台が、入港する船を照らす。'],['外海の観測帯','水平線の手前で、船と浮桟橋が揺れる。水面の下を大きな影が渡る。'],['船の整備ドック','停泊船の側面を、整備台が上り下りしている。'],['養殖の入り江','丸い生け簀の間を、給餌艇が巡回する。']],
  gorge:[['岩棚の居住区','昇降機が、谷の上と下をつないでいる。'],['峡谷を渡る橋','手前の岩壁が途切れ、深い谷が開ける。吊られた荷が揺れながら橋を渡る。'],['段々の採石場','切り出した石が、斜面の搬送路を少しずつ下っていく。'],['崖沿いの集落','岩に沿った窓と通路。小さなリフトが生活の荷物を運ぶ。']],
@@ -13,9 +14,10 @@ export const DISTRICTS={
  caldera:[['溶岩運河の街','溶岩の運河を橋が渡り、荷車と職人が行き交う。'],['鋳造街','るつぼが梁を渡り、型へ赤い金属を注ぐ。火花が散る。'],['地熱発電の塔群','冷却塔が湯気を吐き、タービンが回り続ける。'],['火口縁の湯の町','段々の湯けむりと、揺れる提灯。宿の窓が暖かい。']],
  aerie:[['浮島の駅前','吊り橋とゴンドラが、浮かぶ島々をつないでいる。'],['浮遊島の市場','小さな島ごとに屋台が並ぶ。風船がふわりと昇っていく。'],['風車の発電群','島の上で風車が回る。雲の上で凧が揺れている。'],['飛行船の港','係留塔に飛行船が寄り、荷を下ろす。']]
 };
-export function districtAt(distance,visit=0){
+// `count` is how many districts besides the station a world has (Kowloon has more).
+export function districtAt(distance,visit=0,count=3){
  const step=Math.floor((Math.max(0,distance)+14)/22)%4;
- return step===0?0:1+(step-1+Math.max(0,visit)%3)%3;
+ return step===0?0:1+(step-1+Math.max(0,visit)%count)%count;
 }
 // Fixed geography for a journey with a destination. Duration stretches the
 // stay in each district, never the route order or the number of visits.
@@ -24,8 +26,12 @@ export const ROUTES={
  gorge:[0,3,2,1],jade:[0,2,1,3],relay:[0,2,1,3],
  abyss:[0,1,3,2],caldera:[0,1,2,3],aerie:[0,2,1,3]
 };
-export function routeScene(world,progress,duration){
- const order=ROUTES[world],p=unit(progress),boundaries=[.10,.36,.67];
+// Kowloon has more districts than one ride shows, so the ride out of town takes a
+// different street each visit. Each order still visits three districts once.
+export const ROUTE_VARIANTS={kowloon:[[0,1,3,2],[0,4,5,2],[0,6,7,3],[0,5,1,6],[0,7,4,2],[0,4,6,3]]};
+export function routeOrder(world,visit=0){const v=ROUTE_VARIANTS[world];return v?v[Math.max(0,visit)%v.length]:ROUTES[world];}
+export function routeScene(world,progress,duration,visit=0){
+ const order=routeOrder(world,visit),p=unit(progress),boundaries=[.10,.36,.67];
  const fade=Math.min(.09,3/Math.max(.1,duration));
  for(let i=2;i>=0;i--)if(p>=boundaries[i]){
   const mix=unit((p-boundaries[i])/fade);
@@ -33,8 +39,10 @@ export function routeScene(world,progress,duration){
  }
  return {from:0,to:0,mix:1};
 }
-export function approachScene(world,progress){
- const outer=ROUTES[world][3],mix=unit((progress-.20)/.72);
+// Arriving comes in through the outer district of the same visit's route, the one the ride
+// out will leave by.
+export function approachScene(world,progress,visit=0){
+ const outer=routeOrder(world,visit)[3],mix=unit((progress-.20)/.72);
  return {from:mix===1?0:outer,to:mix===0?outer:0,mix:mix===0?1:mix};
 }
 export function focusPassage(total,remainingMs){
@@ -51,18 +59,18 @@ export function createDistrictJourney(){
  let distance=0,from=0,to=0,mix=1;
  return {
   reset(){distance=0;from=0;to=0;mix=1;},
-  advance(dt,movement,visit,atStation){
+  advance(dt,movement,visit,atStation,count=3){
    if(dt<=0)return;
    if(!atStation)distance+=dt*Math.max(0,movement);
    mix=Math.min(1,mix+dt/3);
-   const next=atStation?0:districtAt(distance,visit);
+   const next=atStation?0:districtAt(distance,visit,count);
    if(mix===1){from=to;if(next!==to){to=next;mix=0;}}
   },
   get view(){return {from,to,mix,distance};}
  };
 }
 export function createDistrictRenderer(a){
- const places=createPlaceScenes(a);
+ const places=createPlaceScenes(a),kowloon=createKowloonDistricts(a);
  const {surface,rect,line,ellipse,poly,rand,ir,tower,pagoda,dome,industry,gardenTree,boulder,wreck,crate,sign,person,steam,drone,robot,rotatingFan,workCrane,shipBoat,drawRay,drawRelayRing,mod,shuttling}=a;
  function layer(p,depth,width,TILE,HEIGHT){
   if(frontier.owns(p))return frontier.layer(p,depth,width);
@@ -71,11 +79,13 @@ export function createDistrictRenderer(a){
   const pp=depth===0?{...p,mid:p.far,near:p.far,trim:p.trim}:p;
   if(depth===1){
    const floor=p.kind==='neon'?(d===1?387:d===3?428:0):p.kind==='garden'?(d===1?405:d===2?379:0):p.kind==='scrap'?400:0;
+   if(p.kind==='neon'&&d>=4)kowloon.floor(c,d,TILE,p);
    if(floor){rect(c,0,floor,TILE,HEIGHT-floor,p.near);line(c,0,floor,TILE,floor,p.trim,2);for(let x=0;x<TILE;x+=48){line(c,x,floor+14,x+23,floor+14,p.trim+'44');line(c,x+31,floor+31,x+53,floor+31,p.trim+'33');}}
   }
   // Reuse the established pixel sprites, with different massing and open space.
   for(let x=-768;x<=TILE;x+=768){
    const r=rand(p.seed+depth*177+mod(x,TILE)*31);
+   if(p.kind==='neon'&&kowloon.layer(c,x,d,depth,p,r))continue;
    if(depth===0){
     if(p.kind==='rock'){boulder(c,x,420,d===1?165:330,d===1?220:300,pp,r,false);if(d!==1)boulder(c,x+290,420,200,240,pp,r,false);}
     else if(p.kind==='water'){if(d!==1){dome(c,x+30,286,130,d===2?84:48,pp,r);dome(c,x+230,286,90,42,pp,r);}}
@@ -134,8 +144,10 @@ export function createDistrictRenderer(a){
   if(frontier.owns(s.p)){frontier.life(c,s,clock,travel,width,quiet);return;}
   if(places.owns(s.p)){places.life(c,s,clock,travel,width,quiet);return;}
   const p=s.p,d=p.district,start=-mod(travel*8.5,768);
+  if(p.kind==='neon'&&d>=4)kowloon.wide(c,d,clock,travel,width,p);
   for(let x=start-768;x<width+768;x+=768){
    const t=clock+mod(Math.round((x+travel*8.5)/768),3)*11;
+   if(p.kind==='neon'&&d>=4){kowloon.life(c,x,d,t,p,quiet,mod(Math.round((x+travel*8.5)/768),3));continue;}
    if(p.kind==='neon'){
     if(d===1){for(let k=0;k<(quiet?2:4);k++){const xx=x+45+k*100;person(c,xx,387,t+k,p,{action:'work',coat:'#b39b81'});steam(c,xx+15,364,t+k,p,3);}const a=shuttling(t,37);person(c,x+30+a.f*340,402,t,p,{walk:true,dir:a.dir,carry:true});}
     else if(d===2){if(s.momentState?.active?.id!=='boat_yield'&&!s.momentState?.done?.boat_yield)shipBoat(c,x+mod(t*8,440),391,t,p,.9);const a=shuttling(t,51);person(c,x+40+a.f*380,329,t,p,{walk:true,dir:a.dir});}
