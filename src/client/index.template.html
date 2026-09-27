@@ -113,14 +113,18 @@
 <dialog id="timer-dialog" aria-labelledby="timer-title">
  <div class="route-header"><div><div class="eyebrow">WINDOW SEAT / FOCUS</div><h2 id="timer-title">次の駅まで、集中する。</h2></div><button type="button" class="icon-button" id="timer-close" aria-label="集中タイマーを閉じる">×</button></div>
  <div class="timer-panel">
-  <div class="timer-readout"><p id="timer-phase" role="status">ポモドーロ</p><output id="timer-time" aria-label="残り時間">25:00</output><p id="timer-summary">作業 25分 → 休憩 5分</p><p id="timer-goal-display" class="timer-goal-display" hidden></p><p id="timer-count" hidden>このタブで 0 回完了</p></div>
+  <div class="timer-readout"><p id="timer-phase" role="status">ポモドーロ</p><output id="timer-time" aria-label="残り時間">25:00</output><p id="timer-summary">作業 25:00 → 休憩 05:00</p><p id="timer-next" hidden></p><p id="timer-goal-display" class="timer-goal-display" hidden></p><p id="timer-count" hidden>このタブで 0 回完了</p></div>
   <form id="timer-quick-form">
+   <fieldset class="timer-quick-durations" id="timer-quick-durations"><legend>作業と休憩の時間</legend>
+    <div class="timer-presets" role="group" aria-label="よく使う組み合わせ"><button type="button" data-focus="25" data-rest="5" aria-pressed="false">25分 / 5分</button><button type="button" data-focus="50" data-rest="10" aria-pressed="false">50分 / 10分</button><button type="button" data-focus="15" data-rest="3" aria-pressed="false">15分 / 3分</button></div>
+    <div class="timer-quick-fields"><label>作業 <span><input type="number" id="quick-focus" min="1" max="1440" step="1" value="25" required> 分</span></label><label>休憩 <span><input type="number" id="quick-break" min="1" max="1440" step="1" value="5" required> 分</span></label></div>
+   </fieldset>
    <div class="timer-goal-field"><label for="timer-goal">この時間にやりたいこと</label><input id="timer-goal" type="text" maxlength="120" autocomplete="off" placeholder="例：資料の構成を3つ書き出す" aria-describedby="timer-goal-help"><p id="timer-goal-help" class="timer-help">任意・120文字まで。空欄のままでも始められます。</p></div>
    <p id="timer-start-reason" class="timer-status" role="status" hidden></p>
    <div class="timer-actions"><button type="submit" id="timer-start" aria-describedby="timer-start-reason">25分の集中を始める</button><button type="button" id="timer-goal-save" hidden>目標を保存</button><button type="button" id="timer-pause" hidden>一時停止</button><button type="button" id="timer-stop" hidden>終了して旅に戻る</button></div>
   </form>
   <p id="timer-message" role="status"></p>
-  <button type="button" id="timer-settings-open" class="timer-settings-link" aria-haspopup="dialog" aria-controls="timer-settings-dialog">時間・到着ベルを設定</button>
+  <button type="button" id="timer-settings-open" class="timer-settings-link" aria-haspopup="dialog" aria-controls="timer-settings-dialog">長い休憩・駅間時間・到着ベルを設定</button>
  </div>
 </dialog>
 <dialog id="timer-settings-dialog" aria-labelledby="timer-settings-title">
