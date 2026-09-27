@@ -28,13 +28,18 @@ export function createStoryUI(g,engine){
    $('story-error').textContent=error||(g.blocked?'保存を確認できていません。閉じるボタンで旅の記録へ戻り、未確認の操作を再試行してください。':'');
   }else {lastPageKey='';if(dialog.open)dialog.close();}
  }
+ const introPlace=s=>s.location.world==='kowloon'&&s.location.atStation;
  async function start(){
   if(engine.state.transition)throw new Error('次の駅に着いてから、帳面を開けます。');
   engine.talk.close();engine.setHeld();
   const s=g.snapshot.state;
   if(s.storyView.active){render();return;}
+  // The first page opens only at the Kowloon window. Say so here rather than send a command the
+  // server would refuse (a refused save holds the journey until it is resolved).
+  const kind=s.storyView.finalReady?'finale':s.storyView.ready?'ending':'intro';
+  if(kind==='intro'&&!introPlace(s))throw new Error('最初の帳面は、九龍に停車中の列車の窓際で開けます。');
   if(s.location.mode==='station'&&s.location.world==='kowloon')await g.send('journey.board');
-  await g.send('story.start',{kind:s.storyView.finalReady?'finale':s.storyView.ready?'ending':'intro'});
+  await g.send('story.start',{kind});
  }
  $('story-open').addEventListener('click',()=>run(start));
  $('story-next').addEventListener('click',()=>run(async()=>{await g.send('story.next');}));
@@ -45,8 +50,8 @@ export function createStoryUI(g,engine){
  g.addEventListener('change',e=>{if(e.detail.reason==='journey.reset'){attemptedIntro=false;lastPageKey='';error='';}render();});
  const timer=setInterval(()=>{
   render();const s=g.snapshot.state;
-  // Never open the intro over a running focus timer; it waits for the next quiet moment.
-  if(!attemptedIntro&&!s.storyView.introSeen&&!s.storyView.active&&s.displayName&&!s.suspended&&!g.busy&&!g.blocked&&!engine?.timer?.active&&!document.querySelector('dialog[open]')){attemptedIntro=true;run(start);}
+  // Never open the intro over a running focus timer or before the first-visit welcome; it waits for the next quiet moment.
+  if(!attemptedIntro&&!s.storyView.introSeen&&!s.storyView.active&&s.displayName&&!s.suspended&&!g.busy&&!g.blocked&&!engine?.timer?.active&&!engine?.welcomePending&&introPlace(s)&&!document.querySelector('dialog[open]')){attemptedIntro=true;run(start);}
  },500);
  window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});render();
  return {open:()=>run(start)};

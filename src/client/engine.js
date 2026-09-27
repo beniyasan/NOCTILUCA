@@ -400,7 +400,7 @@ const engine={
  setHeld(){state.stop.held=true;},
  // Leave the platform right away (the welcome card shows a journey under way, not a wait).
  startMoving(){
-  const s=gateway.snapshot.state;if(s.narrative?.active||s.location.mode==='station'||s.suspended||gateway.blocked||!['stop','arrive'].includes(state.stop.phase))return;
+  const s=gateway.snapshot.state;if(!s.displayName||s.narrative?.active||s.location.mode==='station'||s.suspended||gateway.blocked||!['stop','arrive'].includes(state.stop.phase))return;
   state.stop={phase:'depart',t:0,held:false};state.paused=false;state.elapsed=0;beginLeg();if(s.location.atStation)notify('station.depart');syncPause();updateUI(true);
  },
  continueJourney(){state.stop={phase:'depart',t:0,held:false};state.paused=reducedMotion;state.elapsed=0;beginLeg();audio.chime('depart');syncPause();updateUI(true);},
