@@ -116,3 +116,8 @@ export function newTaskPage(row, text) {
 export function doneUpdate(row) {
   return { properties: { [row.done_property]: row.done_type === 'checkbox' ? { checkbox: true } : { status: { id: row.done_option } } } };
 }
+// A page this task may already have made: same title, created after the claim (with a minute's slack for clocks).
+export function createdSinceFilter(row, text, since) {
+  const after = new Date(Date.parse(since) - 60e3).toISOString();
+  return { and: [{ property: row.title_property, title: { equals: taskTitle(text) } }, { timestamp: 'created_time', created_time: { on_or_after: after } }] };
+}

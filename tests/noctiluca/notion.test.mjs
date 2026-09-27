@@ -117,3 +117,14 @@ test('task sync cannot duplicate pages or lose completions',async()=>{
  // Disconnecting clears the sync records too.
  assert.match(api,/\["notion_outbox", "notion_task_pages", "notion_connections"\]/);
 });
+
+test('a page made under an abandoned claim is found again instead of made twice',async()=>{
+ const {createdSinceFilter}=await import('../../supabase/functions/api/notion.js');
+ assert.deepEqual(createdSinceFilter({title_property:'title'},' 図を\n描く ','2026-09-27T05:00:00.000Z'),{and:[{property:'title',title:{equals:'図を 描く'}},{timestamp:'created_time',created_time:{on_or_after:'2026-09-27T04:59:00.000Z'}}]});
+ const api=await readFile('supabase/functions/api/index.ts','utf8'),create=api.slice(api.indexOf('path.endsWith("/notion/tasks/create")'),api.indexOf('path.endsWith("/notion/tasks/complete")'));
+ // The claim is dropped only when Notion made nothing; after a page exists it is kept.
+ const made=create.indexOf('page = await notionFetch(db, r, "/pages"');
+ assert.ok(create.indexOf('} catch (error) {',made)<create.indexOf('.is("page_id", null)',made));
+ assert.ok(create.indexOf('if (!await record(page.id))')>create.indexOf('} catch (error) {',made));
+ assert.ok(create.indexOf('createdSinceFilter(r, text, known.data.created_at)')<made,'stale claims look for the page first');
+});

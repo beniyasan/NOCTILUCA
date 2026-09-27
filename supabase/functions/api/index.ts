@@ -4,7 +4,7 @@ import data from "./game/content.js";
 import { DEFAULT_FEEDS, filterHeadlines, jstDay, parseFeed, responseText, sanitizeTalks, talkRequest } from "./passenger-talk.js";
 import { JOURNAL_LIMITS, journalCommand, journalDay, journalSummary, journalView } from "./journal.js";
 import { journalAiInput, journalAiRequest, journalAiText } from "./journal-ai.js";
-import { NOTION_API, NOTION_VERSION, authorizeUrl, checkMapping, connectionView, doneUpdate, newTaskPage, openTaskFilter, openTokens, plain, sealTokens, signState, summarizeSource, taskFromPage, verifyState } from "./notion.js";
+import { NOTION_API, NOTION_VERSION, authorizeUrl, checkMapping, connectionView, createdSinceFilter, doneUpdate, newTaskPage, openTaskFilter, openTokens, plain, sealTokens, signState, summarizeSource, taskFromPage, verifyState } from "./notion.js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 const enc = new TextEncoder();
@@ -325,22 +325,35 @@ async function notionRoute(request: Request, url: URL, db: SupabaseClient, playe
     const known = await db.from("notion_task_pages").select("page_id,created_at").eq("player_id", playerId).eq("task_id", taskId).maybeSingle();
     if (known.error) throw known.error;
     if (known.data?.page_id) return { pageId: known.data.page_id };
+    const record = async (pageId: string) => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const saved = await db.from("notion_task_pages").update({ page_id: pageId }).eq("player_id", playerId).eq("task_id", taskId);
+        if (!saved.error) return true;
+      }
+      return false;
+    };
     if (known.data) {
-      // Another request is creating it; a claim older than two minutes was abandoned.
+      // Another request is creating it. A claim left over two minutes may still have made a page
+      // whose ID never got recorded: look for it in Notion before making a new one.
       if (Date.now() - Date.parse(known.data.created_at) < 120e3) fail("NOTION_IN_PROGRESS", "Notionに送っているところです。", 409);
+      const found = await notionFetch(db, r, `/data_sources/${r.data_source_id}/query`, { method: "POST", body: JSON.stringify({ filter: createdSinceFilter(r, text, known.data.created_at), page_size: 1 }) });
+      const page = found.results?.[0];
+      if (page?.id) { await record(page.id); return { pageId: page.id }; }
       await db.from("notion_task_pages").delete().eq("player_id", playerId).eq("task_id", taskId).is("page_id", null);
     }
     const claim = await db.from("notion_task_pages").insert({ player_id: playerId, task_id: taskId });
     if (claim.error) { if (claim.error.code === "23505") fail("NOTION_IN_PROGRESS", "Notionに送っているところです。", 409); throw claim.error; }
+    let page;
     try {
-      const page = await notionFetch(db, r, "/pages", { method: "POST", body: JSON.stringify(newTaskPage(r, text)) });
-      const saved = await db.from("notion_task_pages").update({ page_id: page.id }).eq("player_id", playerId).eq("task_id", taskId);
-      if (saved.error) throw saved.error;
-      return { pageId: page.id };
+      page = await notionFetch(db, r, "/pages", { method: "POST", body: JSON.stringify(newTaskPage(r, text)) });
     } catch (error) {
+      // Nothing was made in Notion: drop the claim so a retry can try again.
       await db.from("notion_task_pages").delete().eq("player_id", playerId).eq("task_id", taskId).is("page_id", null);
       throw error;
     }
+    // The page exists now. Keep the claim even if recording its ID fails; a later retry finds the page above.
+    if (!await record(page.id)) console.error("NOCTILUCA_NOTION_RECORD_FAILED", taskId);
+    return { pageId: page.id };
   }
   // A completion Notion did not take is kept server-side until it goes through.
   if (path.endsWith("/notion/tasks/complete")) {
