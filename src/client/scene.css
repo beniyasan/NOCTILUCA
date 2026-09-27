@@ -149,7 +149,7 @@ dialog{color:var(--ink);font-family:var(--sans);border:1px solid #42596080;borde
 .journal-ai-run{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.journal-ai-run .journal-stats{margin:0}.journal-ai-result{display:grid;gap:8px}.journal-ai-result[hidden]{display:none}.journal-ai-result label{font-size:14px;color:#efd4ae}.journal-ai-result textarea{box-sizing:border-box;width:100%;min-height:160px;resize:vertical;padding:10px 12px;background:#0a1520;border:1px solid #7a6a52;border-radius:6px;color:#e5f0ef;font:inherit;font-size:15px;line-height:1.7}
 @media(max-width:560px){.journal-levels{grid-template-columns:1fr}}
 @media(max-width:480px){.journal-panel{padding:4px 16px 22px}.journal-actions button{flex:1 1 100%}}
-.window-timer-toggle{display:none}
+.window-timer-toggle,.window-timer-peek{display:none}
 @media(max-width:690px){
 .window-timer{padding-right:42px;background:#071623b3}
 .window-timer-toggle{display:grid;place-items:center;position:absolute;top:5px;right:5px;width:30px;height:30px;padding:0;border:1px solid #7aaea455;border-radius:6px;background:#0b1e2a99;color:#dbeee9;font:16px/1 inherit;cursor:pointer}
@@ -159,5 +159,9 @@ dialog{color:var(--ink);font-family:var(--sans);border:1px solid #42596080;borde
 .window-timer[data-collapsed="true"] .window-timer-open{grid-auto-flow:column;justify-content:start;align-items:baseline;gap:8px}
 .window-timer[data-collapsed="true"] .window-timer-open>span{font-size:12px}
 .window-timer[data-collapsed="true"] strong{font-size:20px}
+.window-timer[data-collapsed="true"] .window-timer-peek:not([hidden]){display:grid;gap:1px;max-width:min(62vw,240px);padding:1px 0 2px;border:0;background:none;color:#cfe3dd;font:inherit;text-align:left;cursor:pointer}
+.window-timer-peek>span{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px;line-height:1.45}
+.window-timer-peek>span[hidden]{display:none}
+.window-timer-peek:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .window-timer[data-collapsed="true"] :is(#timer-overlay-goal,.window-timer-foot,.window-timer-controls,#timer-tasks,#timer-journal-note){display:none!important}
 }
