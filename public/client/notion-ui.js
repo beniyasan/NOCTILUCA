@@ -59,7 +59,14 @@ export function createNotionUI(gateway){
   options($('notion-option'),done.options.map(o=>[o.id,o.name+(o.group?'（'+o.group+'）':'')]));
   const pick=done.options.find(o=>o.name===currentName)?.id||done.suggested;if(pick)$('notion-option').value=pick;
  }
- async function refresh(){if(!signedIn()){status=null;return;}status=await gateway.notionStatus();}
+ // The last known answer to "send new tasks to Notion?", for the moment before status loads.
+ const configuredKey=()=>'noctiluca.notion.configured.'+(gateway.snapshot?.playerId||'');
+ let loading=null;
+ async function refresh(){
+  if(!signedIn()){status=null;return;}
+  loading=gateway.notionStatus();
+  try{status=await loading;try{localStorage.setItem(configuredKey(),status.source?'1':'0');}catch{/* per-visit only */}}finally{loading=null;}
+ }
  async function open(note=''){
   message(note);editing=false;paint();if(!dialog.open)dialog.showModal();
   if(!signedIn())return;
@@ -85,30 +92,37 @@ export function createNotionUI(gateway){
  // Back from Notion's permission page: /#notion=<result>. Tidy the address, then show the outcome.
  const back=/^#notion=(\w+)$/.exec(location.hash)?.[1];
  if(back&&supported){history.replaceState(null,'',location.pathname+location.search);void open(RETURNS[back]||RETURNS.error);}
- else if(signedIn())void refresh().then(paint,()=>{});
+ else if(signedIn())void refresh().then(()=>{paint();void flush();},()=>{});
  // ---- task sync ----
  const isPage=v=>typeof v==='string'&&v!=='pending';
  const ready=()=>signedIn()&&!!status?.source;
  const tasks=()=>gateway.snapshot?.state?.focusTasks||[];
  // Completions that could not reach Notion wait on this device and are retried later.
+ // When Notion itself fails, the server keeps the completion; this device only keeps the ones
+ // that never reached the server, all of them, until they do.
  const doneKey=()=>'noctiluca.notion.pendingDone.'+(gateway.snapshot?.playerId||'');
  const readDone=()=>{try{return JSON.parse(localStorage.getItem(doneKey())||'[]');}catch{return [];}};
- const writeDone=list=>{try{localStorage.setItem(doneKey(),JSON.stringify(list.slice(-50)));}catch{/* retried only while the page is open */}};
+ const writeDone=list=>{try{localStorage.setItem(doneKey(),JSON.stringify([...new Set(list)]));}catch{/* retried only while the page is open */}};
  let flushing=false;
- async function push(task){const r=await gateway.notionPost('tasks/create',{text:task.text});await gateway.send('focus.task.link',{id:task.id,notion:r.pageId});}
+ // The server makes at most one Notion page per task, so a retry after a failed link reuses it.
+ async function push(task){
+  const r=await gateway.notionPost('tasks/create',{taskId:task.id,text:task.text});
+  try{await gateway.send('focus.task.link',{id:task.id,notion:r.pageId});}catch(e){if(e?.code!=='TASK_LINKED'&&e?.code!=='TASK_MISSING')throw e;}
+ }
  async function complete(task){
   if(!isPage(task?.notion))return true;
-  try{await gateway.notionPost('tasks/complete',{pageId:task.notion});return true;}
-  catch{writeDone([...readDone().filter(id=>id!==task.notion),task.notion]);return false;}
+  try{const r=await gateway.notionPost('tasks/complete',{pageId:task.notion});return !r.queued;}
+  catch{writeDone([...readDone(),task.notion]);return false;}
  }
- // Resend what failed before: tasks still marked pending, completions still queued.
+ // Resend what failed before: tasks still pending, completions this device kept, then the server's queue.
  async function flush(){
   if(flushing||!ready()||gateway.blocked)return;flushing=true;
   try{
-   for(const task of tasks().filter(t=>t.notion==='pending')){try{await push(task);}catch{break;}}
-   let queued=readDone();
-   for(const pageId of [...queued]){try{await gateway.notionPost('tasks/complete',{pageId});queued=queued.filter(id=>id!==pageId);}catch(e){if(e?.code!=='NOTION_NOT_FOUND')break;queued=queued.filter(id=>id!==pageId);}}
-   writeDone(queued);
+   for(const task of tasks().filter(t=>t.notion==='pending')){try{await push(task);}catch(e){if(e?.code!=='NOTION_IN_PROGRESS')break;}}
+   let kept=readDone();
+   for(const pageId of [...kept]){try{await gateway.notionPost('tasks/complete',{pageId});kept=kept.filter(id=>id!==pageId);}catch{break;}}
+   writeDone(kept);
+   await gateway.notionPost('flush').catch(()=>{});
   }finally{flushing=false;}
  }
  // Picking open Notion tasks in the focus dialog, before the timer starts.
@@ -147,7 +161,13 @@ export function createNotionUI(gateway){
  return {
   get status(){return status;},refresh:()=>refresh().then(paint),
   // A task has just been added here: send it to Notion when connected. Returns false if it has to wait.
-  get sending(){return ready();},
+  // Waits briefly for the connection status on a fresh page; failing that, uses the last known answer.
+  async shouldSend(){
+   if(!signedIn())return false;
+   if(!status)try{await Promise.race([loading||refresh(),new Promise(r=>setTimeout(r,5000))]);}catch{/* fall back below */}
+   if(status)return !!status.source;
+   try{return localStorage.getItem(configuredKey())==='1';}catch{return false;}
+  },
   async added(task){if(!ready()||task?.notion!=='pending')return true;try{await push(task);return true;}catch{return false;}},
   completed:complete,flush,
  };

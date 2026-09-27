@@ -258,7 +258,9 @@ async function notionFetch(db: SupabaseClient, row: NotionRow, path: string, ini
     try {
       const t = await notionTokenRequest({ grant_type: "refresh_token", refresh_token: tokens.refresh });
       tokens = { access: t.access_token, refresh: t.refresh_token };
-      const saved = await db.from("notion_connections").update({ tokens: await sealTokens(tokens, notionKey), updated_at: new Date().toISOString() }).eq("player_id", row.player_id);
+      // Notion rotates the refresh token too: keep the row in step for later calls in this request.
+      row.tokens = await sealTokens(tokens, notionKey);
+      const saved = await db.from("notion_connections").update({ tokens: row.tokens, updated_at: new Date().toISOString() }).eq("player_id", row.player_id);
       if (saved.error) throw saved.error;
     } catch {
       fail("NOTION_REAUTH", "Notionとの連携が切れました。もう一度連携してください。", 401);
@@ -272,6 +274,11 @@ async function notionFetch(db: SupabaseClient, row: NotionRow, path: string, ini
   if (r.status === 404) fail("NOTION_NOT_FOUND", "Notionのデータベースが見つかりません。連携しなおして、使うデータベースを共有してください。", 404);
   if (r.status === 429) fail("NOTION_BUSY", "Notionが混み合っています。少し待ってからお試しください。", 429);
   fail("NOTION_FAILED", "Notionとやりとりできませんでした。少し時間をおいてお試しください。", 502);
+}
+// "done" when Notion took it (or the page is gone), "queued" when it should be tried again later.
+async function completeNotionPage(db: SupabaseClient, row: NotionRow, pageId: string) {
+  try { await notionFetch(db, row, `/pages/${pageId}`, { method: "PATCH", body: JSON.stringify(doneUpdate(row)) }); return "done"; }
+  catch (error) { if (error instanceof GameError && error.code === "NOTION_NOT_FOUND") return "gone"; return "queued"; }
 }
 const notionId = (value: unknown) => typeof value === "string" && /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(value);
 async function notionRoute(request: Request, url: URL, db: SupabaseClient, playerId: string) {
@@ -308,19 +315,56 @@ async function notionRoute(request: Request, url: URL, db: SupabaseClient, playe
   }
   if (request.method !== "POST") return null;
   if (request.headers.get("x-noctiluca-client") !== "1") fail("CSRF", "この画面から操作をやり直してください。", 403);
+  // Creating a page for a NOCTILUCA task is idempotent per task: a retry after the link step
+  // failed gets the page made the first time instead of a duplicate.
   if (path.endsWith("/notion/tasks/create")) {
     const r = configured(), input = await body(request);
-    exactKeys(input, ["text"]);
-    const page = await notionFetch(db, r, "/pages", { method: "POST", body: JSON.stringify(newTaskPage(r, (input as Record<string, unknown>).text)) });
-    return { pageId: page.id };
+    exactKeys(input, ["taskId", "text"]);
+    const { taskId, text } = input as Record<string, unknown>;
+    if (typeof taskId !== "string" || !/^[a-zA-Z0-9_-]{8,80}$/.test(taskId)) fail("BAD_INPUT", "タスクを確認してください。");
+    const known = await db.from("notion_task_pages").select("page_id,created_at").eq("player_id", playerId).eq("task_id", taskId).maybeSingle();
+    if (known.error) throw known.error;
+    if (known.data?.page_id) return { pageId: known.data.page_id };
+    if (known.data) {
+      // Another request is creating it; a claim older than two minutes was abandoned.
+      if (Date.now() - Date.parse(known.data.created_at) < 120e3) fail("NOTION_IN_PROGRESS", "Notionに送っているところです。", 409);
+      await db.from("notion_task_pages").delete().eq("player_id", playerId).eq("task_id", taskId).is("page_id", null);
+    }
+    const claim = await db.from("notion_task_pages").insert({ player_id: playerId, task_id: taskId });
+    if (claim.error) { if (claim.error.code === "23505") fail("NOTION_IN_PROGRESS", "Notionに送っているところです。", 409); throw claim.error; }
+    try {
+      const page = await notionFetch(db, r, "/pages", { method: "POST", body: JSON.stringify(newTaskPage(r, text)) });
+      const saved = await db.from("notion_task_pages").update({ page_id: page.id }).eq("player_id", playerId).eq("task_id", taskId);
+      if (saved.error) throw saved.error;
+      return { pageId: page.id };
+    } catch (error) {
+      await db.from("notion_task_pages").delete().eq("player_id", playerId).eq("task_id", taskId).is("page_id", null);
+      throw error;
+    }
   }
+  // A completion Notion did not take is kept server-side until it goes through.
   if (path.endsWith("/notion/tasks/complete")) {
     const r = configured(), input = await body(request);
     exactKeys(input, ["pageId"]);
     const pageId = (input as Record<string, unknown>).pageId;
     if (!notionId(pageId)) fail("BAD_INPUT", "Notionのページを確認してください。");
-    await notionFetch(db, r, `/pages/${pageId}`, { method: "PATCH", body: JSON.stringify(doneUpdate(r)) });
-    return { done: true };
+    const outcome = await completeNotionPage(db, r, pageId as string);
+    if (outcome === "queued") {
+      const queued = await db.from("notion_outbox").upsert({ player_id: playerId, page_id: pageId, updated_at: new Date().toISOString() }, { onConflict: "player_id,page_id" });
+      if (queued.error) throw queued.error;
+    }
+    return { done: outcome !== "queued", queued: outcome === "queued" };
+  }
+  if (path.endsWith("/notion/flush")) {
+    const r = configured(), waiting = await db.from("notion_outbox").select("page_id,attempts").eq("player_id", playerId).order("created_at").limit(20);
+    if (waiting.error) throw waiting.error;
+    for (const item of waiting.data ?? []) {
+      const outcome = await completeNotionPage(db, r, item.page_id);
+      if (outcome === "queued") { await db.from("notion_outbox").update({ attempts: item.attempts + 1, updated_at: new Date().toISOString() }).eq("player_id", playerId).eq("page_id", item.page_id); break; }
+      await db.from("notion_outbox").delete().eq("player_id", playerId).eq("page_id", item.page_id);
+    }
+    const left = await db.from("notion_outbox").select("page_id", { count: "exact", head: true }).eq("player_id", playerId);
+    return { remaining: left.count ?? 0 };
   }
   if (path.endsWith("/notion/start")) {
     if (!notionReady()) fail("NOTION_UNAVAILABLE", "Notion連携は、いまは使えません。", 503);
@@ -341,8 +385,10 @@ async function notionRoute(request: Request, url: URL, db: SupabaseClient, playe
     if (row) {
       // Revoke on Notion's side too; if that fails the stored tokens are still deleted.
       try { const tokens = await openTokens(row.tokens, notionKey); await timed(`${NOTION_API}/oauth/revoke`, { method: "POST", headers: { "content-type": "application/json", authorization: notionBasic() }, body: JSON.stringify({ token: tokens.access }) }, 10000); } catch { /* best effort */ }
-      const removed = await db.from("notion_connections").delete().eq("player_id", playerId);
-      if (removed.error) throw removed.error;
+      for (const table of ["notion_outbox", "notion_task_pages", "notion_connections"]) {
+        const removed = await db.from(table).delete().eq("player_id", playerId);
+        if (removed.error) throw removed.error;
+      }
     }
     return connectionView(null, notionReady());
   }

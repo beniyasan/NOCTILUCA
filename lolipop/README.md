@@ -9,6 +9,7 @@
 - `supabase/migrations/0004_work_journals.sql`: 作業日誌
 - `supabase/migrations/0005_journal_ai_runs.sql`: 作業日誌のAI整理の利用回数
 - `supabase/migrations/0006_notion_connections.sql`: Notion連携
+- `supabase/migrations/0007_notion_sync.sql`: Notionへの作成と完了の控え
 - `supabase/functions/api/`: JWT検証、ゲームルール、保存API
 - `scripts/sync-lolipop.mjs`: ゲームルールとコンテンツをEdge Functionへ同期
 - `scripts/build-lolipop.mjs`: 静的配信用ビルドを作成
@@ -101,13 +102,16 @@ supabase secrets set JOURNAL_AI_MODEL="gpt-6-luna" JOURNAL_AI_DAILY_LIMIT="3"
   - 「集中する」の画面の「Notionのタスクから選ぶ」で、未完了のタスク(最近更新した100件)から選んで取り込む。取り込んだタスクはNotionのページIDを持つ。
   - 連携中にNOCTILUCAで追加したタスクは、先に手元へ`notion: "pending"`で保存し、Notionにページを作ってから`focus.task.link`でつなぐ。
   - Notionのタスクを完了にすると、選んだ列(チェックボックス、またはステータスの完了の選択肢)を更新する。
-  - Notionに届かなかった追加(`pending`のまま)と完了(端末に控える)は、次に「集中する」を開いたときに送り直す。
+  - Notionへの作成はタスクごとに1回だけ。作ったページは `notion_task_pages` に控え、つなぎ込み(`focus.task.link`)に失敗して送り直しても同じページを使う。
+  - Notionが受け付けなかった完了はサーバーの `notion_outbox` に控え、サーバーまで届かなかった完了だけを端末に控える(どちらも上限なし)。
+  - 送り直しは、ページを開いて連携状態を読み込んだとき、または「集中する」を開いたときに行う。
+  - 連携状態の読み込み前に追加したタスクは、読み込みを最大5秒待ち、それでも分からなければ前回の状態で判断する。
 - APIのバージョンは `2026-03-11`。直近のNotionのエラーは `notion_connections.last_error` に残る。
 
 Notionの開発者ポータル(https://app.notion.com/developers/connections)でPublic connectionを作り、リダイレクトURIに `https://<project>.supabase.co/functions/v1/api/notion/callback`、インストール範囲に「Any workspace」、権限に読み取り・更新・挿入を設定する。
 
 ```sh
-supabase db push   # 0006_notion_connections.sql を適用
+supabase db push   # 0006_notion_connections.sql と 0007_notion_sync.sql を適用
 supabase secrets set NOTION_CLIENT_ID="..." NOTION_CLIENT_SECRET="..." NOTION_TOKEN_KEY="$(openssl rand -base64 32)"
 supabase functions deploy api --no-verify-jwt
 ```

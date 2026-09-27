@@ -100,3 +100,20 @@ test('Notion titles become valid focus tasks',()=>{
  assert.deepEqual(taskFromPage({id:PAGE,properties:{Name:{id:'title',type:'title',title:[{plain_text:'資料'},{plain_text:'をまとめる'}]},Done:{id:'x',type:'checkbox',checkbox:false}}},'title'),{id:PAGE,title:'資料をまとめる'});
  assert.equal(taskFromPage({id:PAGE,properties:{}},'title').title,'');
 });
+
+test('task sync cannot duplicate pages or lose completions',async()=>{
+ const [migration,api,ui]=await Promise.all(['supabase/migrations/0007_notion_sync.sql','supabase/functions/api/index.ts','src/client/notion-ui.js'].map(p=>readFile(p,'utf8')));
+ for(const table of ['notion_task_pages','notion_outbox'])assert.match(migration,new RegExp('alter table public\\.'+table+' enable row level security'));
+ // Create is keyed by the NOCTILUCA task: a known page is returned before anything is created.
+ const create=api.slice(api.indexOf('path.endsWith("/notion/tasks/create")'),api.indexOf('path.endsWith("/notion/tasks/complete")'));
+ assert.match(create,/exactKeys\(input, \["taskId", "text"\]\)/);
+ assert.ok(create.indexOf('return { pageId: known.data.page_id }')<create.indexOf('"/pages", { method: "POST"'));
+ assert.ok(create.indexOf('insert({ player_id: playerId, task_id: taskId })')<create.indexOf('"/pages", { method: "POST"'),'claimed before creating');
+ // Completions Notion refused wait in the outbox; the device keeps every one that never reached us.
+ assert.match(api,/from\("notion_outbox"\)\.upsert/);assert.doesNotMatch(ui,/slice\(-\d+\)/);
+ assert.match(ui,/notionPost\('tasks\/create',\{taskId:task\.id/);
+ // Rotated refresh tokens are kept for the rest of the request.
+ assert.match(api,/row\.tokens = await sealTokens\(tokens, notionKey\)/);
+ // Disconnecting clears the sync records too.
+ assert.match(api,/\["notion_outbox", "notion_task_pages", "notion_connections"\]/);
+});

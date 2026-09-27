@@ -39,7 +39,7 @@ export function createTimerTasksUI(g,active,onComplete,notion=()=>null){
   if(busy||g.busy||g.blocked||(!anytime&&!active()))return false;
   busy=true;if(say===message)message('保存中…');render();
   // While connected to Notion, a new task is saved here first, then created there.
-  const link=action==='add'&&notion()?.sending;if(link)payload={...payload,notion:'pending'};
+  const link=action==='add'&&!!await notion()?.shouldSend();if(link)payload={...payload,notion:'pending'};
   try{
    await g.send('focus.task.'+action,payload);
    if(link){const task=[...(g.snapshot.state.focusTasks||[])].reverse().find(t=>t.notion==='pending'&&t.text===payload.text.trim());if(task&&!await notion().added(task))say('Notionに送れませんでした。次に「集中する」を開いたときに送り直します。');}
