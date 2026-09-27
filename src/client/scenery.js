@@ -1,20 +1,21 @@
 import {createPlaceScenes} from './place-scenes.js';
 import {unit} from './anim-utils.js';
-import {frontier} from './frontier-scenes.js';
+import {frontier,FRONTIER_EXTRA} from './frontier-scenes.js';
 import {KOWLOON_EXTRA,createKowloonDistricts} from './kowloon-districts.js';
 import {SCRAP_EXTRA,createScrapDistricts} from './scrap-districts.js';
 import {PELAGIC_EXTRA,createPelagicDistricts} from './pelagic-districts.js';
+import {GORGE_EXTRA,JADE_EXTRA,RELAY_EXTRA,createInnerDistricts} from './inner-districts.js';
 // View-only districts. These never send commands or modify a player's world.
 export const DISTRICTS={
  kowloon:[['駅前の広告街','重なる看板と、小さな高架列車。'],['深夜の市場','重なる看板と濡れた窓。路地を譲り合い、湯気が換気口へ流れる。'],['運河沿い','建物が途切れ、水面に広告の灯りが伸びる。荷船が橋をくぐる。'],['屋上の住宅街','物干しと給水塔。換気扇のそばで、誰かが夜食をとっている。'],...KOWLOON_EXTRA],
  scrap:[['船底の工房街','回収船の骨組みに、工房の明かりが残る。'],['廃船の泊地','船殻の内側に小さな工房。クレーンが荷をつかみ、ゆっくり持ち上げる。'],['資材の選別場','ベルトが部品を運び、クレーンが次の箱を持ち上げる。'],['機関の修理区','外された推進機。作業灯の下で、試運転と手入れが続く。'],...SCRAP_EXTRA],
  pelagic:[['灯台の埠頭','浮体港の灯台が、入港する船を照らす。'],['外海の観測帯','水平線の手前で、船と浮桟橋が揺れる。水面の下を大きな影が渡る。'],['船の整備ドック','停泊船の側面を、整備台が上り下りしている。'],['養殖の入り江','丸い生け簀の間を、給餌艇が巡回する。'],...PELAGIC_EXTRA],
- gorge:[['岩棚の居住区','昇降機が、谷の上と下をつないでいる。'],['峡谷を渡る橋','手前の岩壁が途切れ、深い谷が開ける。吊られた荷が揺れながら橋を渡る。'],['段々の採石場','切り出した石が、斜面の搬送路を少しずつ下っていく。'],['崖沿いの集落','岩に沿った窓と通路。小さなリフトが生活の荷物を運ぶ。']],
- jade:[['段々温室','花のある温室と、庭師の作業場。'],['大樹の回廊','葉の奥に温室が見える。鳥が止まって枝がしなり、葉先から滴が落ちる。'],['苗の育成区','低い温室が並び、散水の列が奥から順に動く。'],['水庭のほとり','水を渡る細い橋。せせらぎと、ゆっくり動く手入れ舟。']],
- relay:[['中継環の周辺','無人の接続環で、いつもの点検が続く。'],['遠距離アンテナ群','暗い余白に受信皿が浮かぶ。信号灯が伝わり、点検機が止まって確かめる。'],['貨物の接続区','搬送ポッドが列を作り、一つずつ接続口へ入っていく。'],['外縁の集電翼','集電パネルが星へ角度を合わせる。点検機が枠をたどる。']],
- abyss:[['気密ドーム街','ドームを気密通路がつなぎ、配達カプセルが行き来する。'],['珊瑚の居住塔','珊瑚に覆われた塔。発光するイソギンチャクと、魚の群れ。'],['海溝の研究所','二つの岩棚の間に、暗い海溝が口を開ける。調査艇がケーブルで上下する。'],['昆布の水耕畑','昆布の列が潮になびく。収穫艇が畝の間をゆっくり進む。']],
- caldera:[['溶岩運河の街','溶岩の運河を橋が渡り、荷車と職人が行き交う。'],['鋳造街','るつぼが梁を渡り、型へ赤い金属を注ぐ。火花が散る。'],['地熱発電の塔群','冷却塔が湯気を吐き、タービンが回り続ける。'],['火口縁の湯の町','段々の湯けむりと、揺れる提灯。宿の窓が暖かい。']],
- aerie:[['浮島の駅前','吊り橋とゴンドラが、浮かぶ島々をつないでいる。'],['浮遊島の市場','小さな島ごとに屋台が並ぶ。風船がふわりと昇っていく。'],['風車の発電群','島の上で風車が回る。雲の上で凧が揺れている。'],['飛行船の港','係留塔に飛行船が寄り、荷を下ろす。']]
+ gorge:[['岩棚の居住区','昇降機が、谷の上と下をつないでいる。'],['峡谷を渡る橋','手前の岩壁が途切れ、深い谷が開ける。吊られた荷が揺れながら橋を渡る。'],['段々の採石場','切り出した石が、斜面の搬送路を少しずつ下っていく。'],['崖沿いの集落','岩に沿った窓と通路。小さなリフトが生活の荷物を運ぶ。'],...GORGE_EXTRA],
+ jade:[['段々温室','花のある温室と、庭師の作業場。'],['大樹の回廊','葉の奥に温室が見える。鳥が止まって枝がしなり、葉先から滴が落ちる。'],['苗の育成区','低い温室が並び、散水の列が奥から順に動く。'],['水庭のほとり','水を渡る細い橋。せせらぎと、ゆっくり動く手入れ舟。'],...JADE_EXTRA],
+ relay:[['中継環の周辺','無人の接続環で、いつもの点検が続く。'],['遠距離アンテナ群','暗い余白に受信皿が浮かぶ。信号灯が伝わり、点検機が止まって確かめる。'],['貨物の接続区','搬送ポッドが列を作り、一つずつ接続口へ入っていく。'],['外縁の集電翼','集電パネルが星へ角度を合わせる。点検機が枠をたどる。'],...RELAY_EXTRA],
+ abyss:[['気密ドーム街','ドームを気密通路がつなぎ、配達カプセルが行き来する。'],['珊瑚の居住塔','珊瑚に覆われた塔。発光するイソギンチャクと、魚の群れ。'],['海溝の研究所','二つの岩棚の間に、暗い海溝が口を開ける。調査艇がケーブルで上下する。'],['昆布の水耕畑','昆布の列が潮になびく。収穫艇が畝の間をゆっくり進む。'],...FRONTIER_EXTRA.abyss],
+ caldera:[['溶岩運河の街','溶岩の運河を橋が渡り、荷車と職人が行き交う。'],['鋳造街','るつぼが梁を渡り、型へ赤い金属を注ぐ。火花が散る。'],['地熱発電の塔群','冷却塔が湯気を吐き、タービンが回り続ける。'],['火口縁の湯の町','段々の湯けむりと、揺れる提灯。宿の窓が暖かい。'],...FRONTIER_EXTRA.caldera],
+ aerie:[['浮島の駅前','吊り橋とゴンドラが、浮かぶ島々をつないでいる。'],['浮遊島の市場','小さな島ごとに屋台が並ぶ。風船がふわりと昇っていく。'],['風車の発電群','島の上で風車が回る。雲の上で凧が揺れている。'],['飛行船の港','係留塔に飛行船が寄り、荷を下ろす。'],...FRONTIER_EXTRA.aerie]
 };
 // `count` is how many districts besides the station a world has (Kowloon has more).
 export function districtAt(distance,visit=0,count=3){
@@ -30,10 +31,14 @@ export const ROUTES={
 };
 // Kowloon has more districts than one ride shows, so the ride out of town takes a
 // different street each visit. Each order still visits three districts once.
+// Every world now has eight districts; the first order of each is its original route.
+const moreRoutes=first=>[first,[0,4,5,6],[0,7,2,6],[0,5,3,4],[0,4,7,1],[0,5,2,6]];
 export const ROUTE_VARIANTS={
  kowloon:[[0,1,3,2],[0,4,5,2],[0,6,7,3],[0,5,1,6],[0,7,4,2],[0,4,6,3]],
  scrap:[[0,3,2,1],[0,5,4,6],[0,7,2,6],[0,4,3,5],[0,7,5,1],[0,2,4,6]],
  pelagic:[[0,2,3,1],[0,4,5,6],[0,7,2,6],[0,5,3,4],[0,4,7,1],[0,5,2,6]],
+ gorge:moreRoutes([0,3,2,1]),jade:moreRoutes([0,2,1,3]),relay:moreRoutes([0,2,1,3]),
+ abyss:moreRoutes([0,1,3,2]),caldera:moreRoutes([0,1,2,3]),aerie:moreRoutes([0,2,1,3]),
 };
 export function routeOrder(world,visit=0){const v=ROUTE_VARIANTS[world];return v?v[Math.max(0,visit)%v.length]:ROUTES[world];}
 export function routeScene(world,progress,duration,visit=0){
@@ -78,7 +83,7 @@ export function createDistrictJourney(){
 export function createDistrictRenderer(a){
  const places=createPlaceScenes(a);
  // Worlds with more than four districts draw the extras (and alternate blocks) in their own module.
- const extras={neon:createKowloonDistricts(a),scrap:createScrapDistricts(a),water:createPelagicDistricts(a)};
+ const extras={neon:createKowloonDistricts(a),scrap:createScrapDistricts(a),water:createPelagicDistricts(a),...createInnerDistricts(a)};
  const {surface,rect,line,ellipse,poly,rand,ir,tower,pagoda,dome,industry,gardenTree,boulder,wreck,crate,sign,person,steam,drone,robot,rotatingFan,workCrane,shipBoat,drawRay,drawRelayRing,mod,shuttling}=a;
  function layer(p,depth,width,TILE,HEIGHT){
   if(frontier.owns(p))return frontier.layer(p,depth,width);

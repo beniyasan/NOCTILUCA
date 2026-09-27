@@ -55,8 +55,8 @@ test('focus scenery reserves the arrival sequence inside the existing deadline, 
  c.resume();now+=10001;assert.equal(c.poll(),'work');assert.equal(focusPassage(c.view.total,c.view.remainingMs).crossing,1);
 });
 import {DISTRICTS,ROUTE_VARIANTS,routeOrder,districtAt} from '../../src/client/scenery.js';
-test('Kowloon, the Scrap Belt and Pelagic Dock ride out a different way each visit, all eight districts in play',()=>{
- for(const world of ['kowloon','scrap','pelagic']){
+test('every world rides out a different way each visit, all eight districts in play',()=>{
+ for(const world of Object.keys(ROUTES)){
   assert.equal(DISTRICTS[world].length,8,world);
   for(const [name,line] of DISTRICTS[world])assert.ok(name&&line,world);
   const variants=ROUTE_VARIANTS[world],used=new Set();
@@ -76,8 +76,6 @@ test('Kowloon, the Scrap Belt and Pelagic Dock ride out a different way each vis
   const cruising=new Set();for(let visit=0;visit<14;visit++)for(let dist=0;dist<88;dist+=22)cruising.add(districtAt(dist,visit,7));
   assert.deepEqual([...cruising].sort(),[0,1,2,3,4,5,6,7]);
  }
- // Other worlds keep their single fixed route.
- assert.deepEqual(routeOrder('gorge',5),ROUTES.gorge);
  assert.ok([0,1,2,3].includes(districtAt(30,5)),'three-district worlds unchanged');
  // Every place the engine asks for a route passes the visit, so no view falls back to the first order.
  const engine=readFileSync('src/client/engine.js','utf8');
