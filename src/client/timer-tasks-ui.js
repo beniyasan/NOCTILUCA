@@ -1,7 +1,10 @@
 const $=id=>document.getElementById(id);
 export function createTimerTasksUI(g,active,onComplete){
- const list=$('timer-task-list'),input=$('timer-task-input'),composer=$('timer-task-composer'),toggle=$('timer-task-toggle');let busy=false,last='',editingPlayer=g.snapshot.playerId,messageExpiresAt=0;
+ const list=$('timer-task-list'),input=$('timer-task-input'),composer=$('timer-task-composer'),toggle=$('timer-task-toggle');let busy=false,last='',lastQuick='',editingPlayer=g.snapshot.playerId,messageExpiresAt=0;
+ // The focus dialog can add tasks before the timer starts; completing them stays with the running timer.
+ const quickList=$('timer-quick-task-list'),quickInput=$('timer-quick-task-input'),quickAdd=$('timer-quick-task-add');
  function message(text,temporary=false){$('timer-task-message').textContent=text;messageExpiresAt=temporary?Date.now()+3000:0;}
+ function quickMessage(text){if($('timer-quick-task-message'))$('timer-quick-task-message').textContent=text;}
  function render(){
   if(messageExpiresAt&&Date.now()>=messageExpiresAt)message('');
   const tasks=g.snapshot.state.focusTasks||[],disabled=busy||!!g.busy||g.blocked;
@@ -21,19 +24,33 @@ export function createTimerTasksUI(g,active,onComplete){
   }
   for(const button of list.querySelectorAll('button'))button.disabled=disabled||!active();
   $('timer-task-add').disabled=disabled||!active()||!input.value.trim()||tasks.length>=20;
+  if(!quickList)return;
+  if(signature!==lastQuick){lastQuick=signature;quickList.replaceChildren(...tasks.map(task=>{const li=document.createElement('li');li.textContent=task.text;return li;}));}
+  quickAdd.disabled=disabled||!quickInput.value.trim()||tasks.length>=20;
+  const full='タスクは20件までです。終わったものは、始めたあと完了にできます。',note=$('timer-quick-task-message');
+  if(tasks.length>=20&&!busy)quickMessage(full);else if(note?.textContent===full)quickMessage('');
  }
- async function send(action,payload){
-  if(busy||g.busy||g.blocked||!active())return;
-  busy=true;message('保存中…');render();
+ async function addBeforeStart(){
+  const text=quickInput.value.trim();if(!text||busy||g.busy||g.blocked)return;
+  quickMessage('保存中…');
+  if(await send('add',{text},{anytime:true,say:quickMessage})){if(quickInput.value.trim()===text)quickInput.value='';quickMessage('');render();}
+ }
+ async function send(action,payload,{anytime=false,say=message}={}){
+  if(busy||g.busy||g.blocked||(!anytime&&!active()))return false;
+  busy=true;if(say===message)message('保存中…');render();
   try{await g.send('focus.task.'+action,payload);return true;}
-  catch(e){message(e.message+(g.blocked?' 「旅の記録」で保存を確認してください。':''));return false;}
+  catch(e){say(e.message+(g.blocked?' 「旅の記録」で保存を確認してください。':''));return false;}
   finally{busy=false;render();}
  }
  $('timer-task-form').addEventListener('submit',e=>{e.preventDefault();if(!e.target.reportValidity()||!input.value.trim())return;void send('add',{text:input.value.trim()});});
  input.addEventListener('input',render);
+ quickInput?.addEventListener('input',render);
+ quickAdd?.addEventListener('click',()=>void addBeforeStart());
+ // Enter adds the task instead of submitting the dialog (which would start the timer).
+ quickInput?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();void addBeforeStart();}});
  g.addEventListener('change',e=>{
   if(g.snapshot.playerId!==editingPlayer||['reload','guest','backup.restore','journey.reset'].includes(e.detail.reason)){
-   composer.open=false;input.value='';editingPlayer=g.snapshot.playerId;message('');
+   composer.open=false;input.value='';if(quickInput)quickInput.value='';quickMessage('');editingPlayer=g.snapshot.playerId;message('');
   }else if(e.detail.reason==='focus.task.add'){
    // Preserve any next task typed while the preceding addition was saving.
    const added=g.snapshot.state.focusTasks?.at(-1);if(added?.text===input.value.trim()){
