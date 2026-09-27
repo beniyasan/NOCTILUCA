@@ -120,6 +120,19 @@ function heroNeon(c,x,p,r){
  for(let yy=y+9;yy<y+h;yy+=16){rect(c,x-7,yy,2,2,p.light);}
 
 }
+// The second landmark along the Kowloon front: a noodle house stacked under a round sign,
+// so neighbouring panes of a wide window never show the same billboard twice.
+function heroNeonB(c,x,p,r){
+ const w=96,top=112,base=319;
+ rect(c,x-6,top,w+12,base-top,p.near);rect(c,x-2,top+4,w+4,base-top-8,'#2e2034');
+ for(let k=0;k<4;k++){const yy=top+22+k*38;rect(c,x+4,yy-8,w-8,3,p.trim);for(let j=0;j<5;j++)rect(c,x+10+j*17,yy,10,14,(k+j)%3?p.light+'bb':p.accent+'88');}
+ ellipse(c,x+w/2,top-34,38,38,'#0b1020');glow(c,x+w/2-32,top-66,64,64,p.neon,12);ellipse(c,x+w/2,top-34,34,34,'#c8245f');ellipse(c,x+w/2,top-34,28,28,'#e83a72');
+ cjk(c,'麺',x+w/2-13,top-47,'#fff1e6',26);rect(c,x+w/2-2,top+2,4,6,p.trim);
+ for(let k=0;k<3;k++)line(c,x+30+k*18,top-76,x+34+k*18,top-90,'#f6d9e4aa',2);
+ sign(c,x+w+4,top+30,15,70,p,r,true,'二十四時');
+ rect(c,x-10,base-38,w+20,6,p.neon);for(let xx=x-8;xx<x+w+8;xx+=12)rect(c,xx,base-32,8,10,Math.round(xx/12)%2?'#e8d8c0':p.light);
+ sign(c,x+6,base-18,w-12,15,p,r,false,'NOODLE 24H');
+}
 function heroWater(c,x,p,r){
  const y=152;rect(c,x+42,y+44,20,163,p.near);pipe(c,[[x+46,y+67],[x+21,y+67],[x+21,y+130],[x+3,y+130]],p,4);
  ellipse(c,x+53,y+31,67,61,'#112a3b');ellipse(c,x+53,y+28,63,57,'#317785');ellipse(c,x+53,y+27,58,52,'#123f59');
@@ -179,7 +192,8 @@ function createLayer(p,depth,width){
   // One carefully composed landmark in every strip, plus a second far away.
   const heroX=width<420?Math.max(65,width*.31):width*.27;
   const heroes={neon:heroNeon,scrap:heroScrap,water:heroWater,rock:heroRock,garden:heroGarden,ivory:heroIvory,void:heroVoid,desert:heroDesert};
-  heroes[p.kind](c,heroX,p,r);heroes[p.kind](c,heroX+1180,p,r);
+  const second={neon:heroNeonB}[p.kind]||heroes[p.kind];
+  heroes[p.kind](c,heroX,p,r);second(c,heroX+1180,p,r);
   c.globalAlpha=.05;rect(c,0,0,TILE,HEIGHT,p.haze);c.globalAlpha=1;return e;
  }
  if(depth===2){

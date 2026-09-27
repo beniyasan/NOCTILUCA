@@ -51,14 +51,18 @@ export function createPlaceScenes(a){
      // Set back an alley between the tall shop houses.
      rect(c,x+151,219,37,177,'#101b2a');rect(c,x+161,324,17,46,'#89795d');
      rect(c,x+161,330,17,36,'#234044');line(c,x+149,218,x+188,239,p.trim);
+     // Twelve shop houses per tile, each a little different, so wide windows do not repeat.
+     const u=Math.round(x/192);
      for(let y=top+38;y<316;y+=48){
       rect(c,x+11,y,30,18,'#6b77704d');line(c,x+24,y,x+24,y+18,p.trim);
       rect(c,x+98,y+14,26,14,'#202d37');line(c,x+95,y+29,x+128,y+29,p.trim,2);
+      if(u%3===1){c.strokeStyle='#5a6670';c.lineWidth=1;c.strokeRect(x+50.5,y-4.5,40,26);for(let k=1;k<5;k++)line(c,x+50+k*8,y-4,x+50+k*8,y+21,'#5a667088');}
      }
      for(let k=0;k<3;k++){const xx=x+12+k*44;rect(c,xx,346,38,49,'#102330');rect(c,xx+3,351,30,23,k===1?'#be956888':'#4b8a8288');line(c,xx+18,351,xx+18,377,p.near,2);}
-     poly(c,[[x,340],[x+146,340],[x+153,349],[x-4,349]],'#73505a');line(c,x,340,x+146,340,p.neon,2);
-     sign(c,x+121,201,20,100,p,r,true,['深夜飯','茶と麺','修理店'][mod(x/192,3)]);
-     rect(c,x+54,320,55,16,p.near);sign(c,x+55,320,53,15,p,r,false,'OPEN');
+     poly(c,[[x,340],[x+146,340],[x+153,349],[x-4,349]],['#73505a','#3d5a60','#6a5a3a'][u%3]);line(c,x,340,x+146,340,u%2?p.accent:p.neon,2);
+     sign(c,x+121,201,20,100,p,r,true,['深夜飯','茶と麺','修理店','薬局','占い','両替','焼味','カラオケ'][u%8]);
+     if(u%4===3){rect(c,x+8,300,132,20,p.near);sign(c,x+10,300,128,18,p,r,false,['DUMPLING','MARKET','KARAOKE'][u%3]);}
+     else{rect(c,x+54,320,55,16,p.near);sign(c,x+55,320,53,15,p,r,false,['OPEN','24H','RAMEN'][u%3]);}
      line(c,x+6,top+18,x+6,332,p.trim,3);line(c,x+6,285,x+27,285,p.trim,3);
     }
     for(let x=0;x<TILE;x+=768){c.strokeStyle='#121d2a';c.beginPath();c.moveTo(x,115);c.quadraticCurveTo(x+220,165,x+490,101);c.stroke();}
