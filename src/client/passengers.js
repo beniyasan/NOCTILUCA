@@ -3,10 +3,13 @@
 // A lone traveller only passes the time; pairs and groups talk among
 // themselves in lines generated from topic templates. Now and then someone
 // unusual boards instead (see passenger-kinds.js): a tipsy salaryman, a robot
-// maid, visitors from off-world, or a lone animal that never talks. View-only:
+// maid, visitors from off-world, or a lone animal that never talks. A few
+// groups play out a little scene (passenger-scenes.js), a drunk may stretch out
+// across the seat to sleep, and animals hop down to wander the floor. View-only:
 // nothing here is saved, sent to the server or counted as progress.
 import {mod} from './anim-utils.js';
 import {SPECIES,ANIMAL_POSES,CAST_POSES,ACTION_SECONDS,PACE,CAST_TALK,animalLook,drunkLook,maidLook,alienLook,monologue,createKindPainters} from './passenger-kinds.js';
+import {SCENES,SLEEP_TALK,FLOOR_POSES,conductorLook} from './passenger-scenes.js';
 
 // ---- conversation generator (pure) ----------------------------------------
 const pickOf=(r,a)=>a[Math.floor(r()*a.length)];
@@ -51,7 +54,7 @@ const TRIO=[
  [['a','ちょっと、{n2}。{thing}返してよ。','{n2}、{thing}まだ?'],['b','!借りてないって。','!{n3}に貸したんだよ。'],['c','え、わたし?','……あ。'],['a','{n3}?','ほら。'],['c','~ごめん、家にある。','~明日持ってくる。'],['?b','~ほらね。','~疑われ損。']],
 ];
 const FILLERS=['へえ。','うん。','そうなの?','なるほど。','ふうん。'];
-const SOLO_POSES=['idle','read','phone','doze','idle','read'];
+const SOLO_POSES=['idle','read','phone','doze','idle','read','eat','knit'];
 
 function fill(text,w,r){return text.replace(/\{(\w+)\}/g,(_,k)=>w[k]??pickOf(r,WORDS[k]||['……']));}
 // Generate one conversation. Returns [{who,text,mark}] with who indexing members.
@@ -76,7 +79,8 @@ export function generateTalk({size,tone='chat',cast='people',random:r=Math.rando
 }
 
 // ---- boarding / seating / talk director (pure) --------------------------------
-const WALK=34,SIT=.6,SPACING=25;
+const WALK=34,SIT=.6,SPACING=25,LIE=56;
+const lineHold=text=>Math.min(6.5,2.2+text.length*.13);
 const SKIN=['#f0cfb4','#e2b896','#c99673','#a8764f','#7e5538'];
 const HAIR=['#1d1a1c','#2c211b','#4a3326','#6b4a2e','#9a9a9a','#d8c7a0','#b04a5a','#3f5f9a','#6a3f7a'];
 const TOPS=['#8a3b3b','#3d5a7a','#56704a','#c8b27a','#5a4a6e','#a86a3c','#2f3a3a','#d9d2c2','#7a2f4f','#3e6a6a'];
@@ -107,8 +111,9 @@ function lookOf(kind,r){return kind==='human'?appearance(r):kind==='drunk'?drunk
 const ANIMALS=new Set(SPECIES);// the cat and the tool bag the cabin paints on the seat
 // `talk` may supply lines from elsewhere (the Lolipop edition's daily pool); null falls back to the templates.
 export function createPassengerDirector({random:r=Math.random,talk=null}={}){
- let group=null,queue=null,script=null,wait=0,width=460,time=0;
+ let group=null,queue=null,script=null,scene=null,wait=0,width=460,time=0;
  const members=()=>group?.members||[];
+ const px=v=>v/width,clamp=u=>Math.max(.03,Math.min(.97,u));
  function seats(size,w,avoid=[]){
   const span=(size-1)*SPACING/w,props=[...(w>=260?BLOCKED:[]),...avoid],edge=22/w;
   for(let i=0;i<40;i++){
@@ -125,28 +130,72 @@ export function createPassengerDirector({random:r=Math.random,talk=null}={}){
   const order=from<0?[...targets].reverse():targets;// the first in walks furthest
   const rest=k=>ANIMALS.has(k)?ANIMAL_POSES[k][0]:CAST_POSES[k]?.[0]||'idle';
   group={size,rel,cast,names,stays:0,ctx,members:order.map((u,i)=>({kind:kinds[i],app:lookOf(kinds[i],r),seat:u,x:from<0?-.06-i*.05:1.06+i*.05,dir:-from,state:'walk',t:0,delay:i*.7,pose:rest(kinds[i]),rest:rest(kinds[i]),pt:0,look:0,poseTimer:4+r()*10,sayTimer:8+r()*14}))};
-  wait=3+r()*4;script=null;
+  wait=3+r()*4;script=null;scene=null;
+  for(const m of group.members){if(m.kind==='drunk'&&size===1)m.lie=lieRoom(m.seat,ctx.avoid);if(ANIMALS.has(m.kind))m.roam=30+r()*30;}
+ }
+ // Which way a lone drunk can stretch out along the seat without lying on a prop (0: no room).
+ function lieRoom(u,avoid=[]){
+  const props=[...(width>=260?BLOCKED:[]),...avoid];
+  for(const d of r()<.5?[1,-1]:[-1,1]){const end=u+d*px(LIE),lo=Math.min(u,end),hi=Math.max(u,end);
+   if(lo>px(22)&&hi<1-px(22)&&props.every(([a,b])=>hi<a-px(6)||lo>b+px(6)))return d;}
+  return 0;
+ }
+ // ---- scenes: the steps come from passenger-scenes.js; this is their toolkit ----
+ const kit=()=>({r,g:group,px,
+  stand(m){m.state='rise';m.t=0;m.after='stand';m.pose='idle';m.look=0;},
+  goTo(m,u,face){m.goal=clamp(u);m.face=face;m.state='step';},
+  sitBack(m){m.state='walk';m.pose='idle';m.look=0;},
+  enterStaff(u){const from=u>.5?1.06:-.06;group.staff={kind:'conductor',app:conductorLook(),seat:from,x:from,dir:from>0?-1:1,state:'step',goal:clamp(u),face:null,t:0,delay:0,pose:'idle',look:0,pt:0};},
+  exitStaff(){const m=group.staff;if(!m)return;m.goal=m.x>.5?1.1:-.1;m.face=null;m.state='step';m.pose='idle';m.leaving=true;},
+ });
+ function startScene(name){scene={name,steps:SCENES[name](kit()),i:0,t:0,started:false};group.sceneDone=true;script=null;}
+ function runScene(dt){
+  const st=scene.steps[scene.i];
+  if(!st){scene=null;group.dust=false;group.props=null;wait=12+r()*16;for(const m of group.members){m.pose=m.kind==='drunk'?'sway':'idle';m.look=0;}return;}
+  if(!scene.started){scene.started=true;scene.t=0;st.on?.();}
+  scene.t+=dt;st.tick?.(dt,scene.t);
+  const need=Math.max(st.d||0,st.line?lineHold(st.line.text)+.9:0);
+  if(scene.t>=need&&(!st.until||st.until())){scene.i++;scene.started=false;}
+ }
+ // ---- an animal hops down, wanders the floor, and settles on a seat again ----
+ function wander(m){for(let i=0;i<8;i++){const u=.05+r()*.9;if(Math.abs(u-m.x)>px(60))return u;}return m.x>.5?.2:.8;}
+ function floorLife(m,dt){
+  m.pt+=dt;m.poseTimer-=dt;m.floorT-=dt;
+  if(m.poseTimer<=0){const list=FLOOR_POSES[m.kind].filter(p=>p!==m.pose);m.pose=pickOf(r,list);m.pt=0;m.poseTimer=ACTION_SECONDS[m.pose]??(3+r()*6);if(!ACTION_SECONDS[m.pose])m.rest=m.pose;}
+  if(m.floorT>0||ACTION_SECONDS[m.pose])return;
+  const seat=r()<.55?seats(1,width,group.ctx.avoid):null;
+  if(seat){m.seat=seat[0];m.state='walk';m.t=0;}else{m.goal=wander(m);m.state='roam';m.t=0;}
  }
  // Resting poses hold a while; actions (a stretch, a hiccup) play once, then rest.
  function nextPose(m,list){
   const pose=pickOf(r,list.filter(p=>p!==m.pose))||m.pose;m.pose=pose;m.pt=0;
-  m.poseTimer=ACTION_SECONDS[pose]??(8+r()*14);if(!ACTION_SECONDS[pose])m.rest=pose;
+  m.poseTimer=ACTION_SECONDS[pose]??(pose==='lie'?90+r()*90:8+r()*14);if(!ACTION_SECONDS[pose])m.rest=pose;
  }
  function behave(m,dt){
   m.pt+=dt;m.poseTimer-=dt;if(m.poseTimer>0)return;
-  const list=ANIMALS.has(m.kind)?ANIMAL_POSES[m.kind]:CAST_POSES[m.kind];
+  const list=(ANIMALS.has(m.kind)?ANIMAL_POSES[m.kind]:CAST_POSES[m.kind]).filter(p=>p!=='lie'||m.lie);
   if(ACTION_SECONDS[m.pose]&&r()<.6){m.pose=m.rest;m.pt=0;m.poseTimer=6+r()*10;return;}
   nextPose(m,list);
  }
- function leave(){
-  if(!group)return;script=null;
-  for(const m of group.members){m.state='rise';m.t=0;m.delay=r()*.8;m.dir=m.seat<.5?-1:1;m.pose='idle';}
+ // Standing or wandering members head straight for the door; seated ones get up first.
+ function leave(rush=false){
+  if(!group)return;script=null;scene=null;group.dust=false;group.props=null;
+  if(group.staff){group.staff.goal=group.staff.x>.5?1.1:-.1;group.staff.state='step';group.staff.leaving=true;}
+  for(const m of group.members){const up=m.state==='seated'||m.state==='sit';m.state=up?'rise':'out';m.after=null;m.t=0;m.delay=rush?0:r()*.8;m.dir=m.x<.5?-1:1;m.pose='idle';m.rush=rush;}
   group.leaving=true;
  }
  const api={
   // A stop at a station: people may get off, then others may get on.
   arrive(ctx={}){
-   if(group&&!group.leaving){group.stays++;group.ctx={...group.ctx,...ctx};if(group.stays>=3||r()<.5)leave();else return;}
+   if(group&&!group.leaving){
+    group.stays++;group.ctx={...group.ctx,...ctx};
+    if(scene)return;// nobody gets off in the middle of a scene
+    // A lone rider dozing at the stop wakes with a start and dashes for the door.
+    const m=group.members[0];
+    if(group.cast==='people'&&group.size===1&&m.state==='seated'&&m.pose==='doze'&&r()<.6){
+     group.shout={text:fill(pickOf(r,['はっ、{st}!? 降ります降ります!','やばっ、乗り過ごすとこだった!','あっ、ここ{st}だ!']),{st:ctx.station||group.ctx.station||''},r),t:0};leave(true);
+    }else if(group.stays>=3||r()<.5)leave();else return;
+   }
    const spec=pickCast(r);
    queue=spec?{spec,ctx,delay:group?4:1.5}:null;
   },
@@ -158,24 +207,44 @@ export function createPassengerDirector({random:r=Math.random,talk=null}={}){
    group=null;queue=null;if(!spec)return;
    board(spec,ctx);if(!group)return;for(const m of group.members){m.x=m.seat;m.state='seated';m.delay=0;m.dir=ANIMALS.has(m.kind)?(r()<.5?-1:1):1;}
   },
-  clear(){group=null;queue=null;script=null;},
+  clear(){group=null;queue=null;script=null;scene=null;},
+  // Play a scene now if the group fits it (the visual harness and tests use this).
+  stage(name){
+   if(!group||group.leaving||scene||!SCENES[name]||!group.members.every(m=>m.state==='seated'))return false;
+   if(group.cast!=='people'||group.size!==(name==='fight'?3:2))return false;
+   startScene(name);return true;
+  },
   advance(dt,{width:w=width,quiet=false}={}){
    width=w;time+=dt;
    if(queue&&!group){queue.delay-=dt;if(queue.delay<=0){const q=queue;queue=null;board(q.spec,q.ctx);}}
    if(!group)return;
-   for(const m of group.members){
-    const speed=WALK*PACE[m.kind]/width;
+   for(const m of [...group.members,...(group.staff?[group.staff]:[])]){
+    const speed=WALK*(PACE[m.kind]||1)*(m.rush?2.2:1)/width;
     if(m.delay>0){m.delay-=dt;continue;}
     m.t+=dt;
     if(m.state==='walk'){const d=m.seat-m.x;m.dir=Math.sign(d)||m.dir;if(Math.abs(d)<=speed*dt){m.x=m.seat;m.state='sit';m.t=0;}else m.x+=Math.sign(d)*speed*dt;}
     else if(m.state==='sit'&&m.t>=SIT){m.state='seated';m.t=0;}
-    else if(m.state==='rise'&&m.t>=SIT){m.state='out';m.t=0;}
+    else if(m.state==='rise'&&m.t>=SIT*(m.rush?.5:1)){m.state=m.after||'out';m.after=null;m.t=0;}
+    else if(m.state==='down'&&m.t>=SIT){m.state='roam';m.t=0;}
+    else if(m.state==='step'||m.state==='roam'){
+     const d=m.goal-m.x;
+     if(Math.abs(d)<=speed*dt){m.x=m.goal;m.t=0;if(m.face)m.dir=m.face;if(m.state==='roam'){m.state='floor';m.floorT=5+r()*10;m.poseTimer=0;}else m.state='stand';}
+     else{m.x+=Math.sign(d)*speed*dt;m.dir=Math.sign(d);}
+    }
     else if(m.state==='out'){m.x+=m.dir*speed*dt;if(m.x<-.1||m.x>1.1)m.state='gone';}
    }
-   if(group.leaving){if(group.members.every(m=>m.state==='gone'))group=null;return;}
+   if(group.staff?.leaving&&group.staff.state==='stand')group.staff=null;
+   group.age=(group.age||0)+dt;if(group.shout)group.shout.t+=dt;
+   if(group.leaving){if(group.members.every(m=>m.state==='gone')&&!group.staff)group=null;return;}
+   if(scene){if(!quiet)runScene(dt);return;}
+   // Animals keep to themselves: only movements, never a line. Now and then they hop down and wander.
+   if(group.cast==='animal'){
+    const m=group.members[0];
+    if(m.state==='floor')floorLife(m,dt);
+    else if(m.state==='seated'){behave(m,dt);m.roam-=dt;if(m.roam<=0&&!quiet&&!ACTION_SECONDS[m.pose]){m.roam=25+r()*40;m.goal=wander(m);m.state='down';m.t=0;}}
+    return;
+   }
    const seated=group.members.every(m=>m.state==='seated');if(!seated)return;
-   // Animals keep to themselves: only movements, never a line.
-   if(group.cast==='animal'){behave(group.members[0],dt);return;}
    if(group.size===1&&group.cast==='people'){
     const m=group.members[0];m.poseTimer-=dt;
     if(m.poseTimer<=0){m.pose=pickOf(r,SOLO_POSES);m.poseTimer=14+r()*26;}
@@ -192,7 +261,10 @@ export function createPassengerDirector({random:r=Math.random,talk=null}={}){
      return;
     }
     behave(m,dt);if(quiet)return;m.sayTimer-=dt;
-    if(m.sayTimer<=0){const w={st:group.ctx.station||'',next:group.ctx.next||''};script={tone:'chat',lines:monologue(group.cast,r,text=>fill(text,w,r)),i:0,t:0};m.pt=0;}
+    if(m.sayTimer<=0){const w={st:group.ctx.station||'',next:group.ctx.next||''};
+     // Stretched out asleep, he only talks in his sleep and stays lying down.
+     const lines=m.pose==='lie'?[{who:0,text:fill(pickOf(r,SLEEP_TALK),w,r),mark:'',pose:'lie'}]:monologue(group.cast,r,text=>fill(text,w,r));
+     script={tone:'chat',lines,i:0,t:0};m.pt=0;}
     return;
    }
    // Conversation: hold (not skip) while quiet, so a line is never missed.
@@ -200,6 +272,13 @@ export function createPassengerDirector({random:r=Math.random,talk=null}={}){
    if(!script){
     wait-=dt;for(const m of group.members){m.pose=m.kind==='drunk'?'sway':'idle';m.look=0;}
     if(wait>0)return;
+    // Once per group, a trio may come to blows, or a pair doze off onto a shoulder or spill some oranges.
+    if(group.cast==='people'&&!group.sceneDone&&width>=200&&group.age>=30){
+     const roll=r();group.sceneDone=true;
+     if(group.size===3&&roll<.2){startScene('fight');return;}
+     if(group.size===2&&roll<.1){startScene('lean');return;}
+     if(group.size===2&&roll<.2){startScene('oranges');return;}
+    }
     const tone=group.cast==='people'&&group.size===2&&r()<(group.rel==='couple'||group.rel==='siblings'?.4:.25)?'quarrel':'chat';
     const ask={size:group.size,tone,cast:group.cast,random:r,names:group.names,station:group.ctx.station,next:group.ctx.next,world:group.ctx.world};
     // The daily pool is written for ordinary riders; specials keep to their own lines.
@@ -216,10 +295,14 @@ export function createPassengerDirector({random:r=Math.random,talk=null}={}){
    if(script.t>=hold+gap){script.i++;script.t=0;}
   },
   get view(){
-   const line=script?.lines[script.i],hold=line?Math.min(6.5,2.2+line.text.length*.13):0;
-   return {size:group?.size||0,rel:group?.rel||null,cast:group?.cast||null,leaving:!!group?.leaving,queued:queue?.spec.size||0,tone:script?.tone||null,
-    members:members().map(m=>({...m})),
-    line:line&&script.t<hold?{who:line.who,text:line.text,mark:line.mark,pose:line.pose||null,t:script.t,x:group.members[line.who].seat}:null};
+   const line=script?.lines[script.i],hold=line?lineHold(line.text):0;
+   const cue=scene?.started?scene.steps[scene.i]?.line:null,speaker=cue&&(cue.who==='staff'?group.staff:group.members[cue.who]);
+   const shout=group?.shout&&group.shout.t<lineHold(group.shout.text)?group.shout:null;
+   return {size:group?.size||0,rel:group?.rel||null,cast:group?.cast||null,leaving:!!group?.leaving,queued:queue?.spec.size||0,tone:scene?'scene':script?.tone||null,scene:scene?.name||null,
+    members:members().map(m=>({...m})),staff:group?.staff?{...group.staff}:null,props:(group?.props||[]).map(o=>({x:o.x})),dust:!!group?.dust,
+    line:cue&&speaker&&scene.t<lineHold(cue.text)?{who:cue.who,text:cue.text,mark:cue.mark,pose:null,t:scene.t,x:speaker.x}
+     :shout?{who:0,text:shout.text,mark:'!',pose:null,t:shout.t,x:group.members[0].x}
+     :line&&script.t<hold?{who:line.who,text:line.text,mark:line.mark,pose:line.pose||null,t:script.t,x:group.members[line.who].seat}:null};
   },
  };
  return api;
@@ -249,7 +332,7 @@ export function createPassengers(host,cabin,{talk=null}={}){
   if(s==='bun'){R(x-2,y-3,5,3,h);R(x-4,y+3,8,1,h);}
  }
  function face(a,x,y,look,t,pose,talking){
-  const blink=mod(t+a.phase,a.blink)<.13||pose==='doze',down=pose==='read'||pose==='phone'?1:0,ex=look*2,eye='#2a1c16';
+  const blink=mod(t+a.phase,a.blink)<.13||pose==='doze',down=['read','phone','eat','knit'].includes(pose)?1:0,ex=look*2,eye='#2a1c16';
   if(pose==='laugh'){R(x-3+ex,y+5,2,1,eye);R(x+1+ex,y+5,2,1,eye);}
   else if(blink){R(x-3+ex,y+6+down,2,1,eye);R(x+1+ex,y+6+down,2,1,eye);}
   else{R(x-3+ex,y+5+down,1,2,eye);R(x+2+ex,y+5+down,1,2,eye);}
@@ -257,15 +340,30 @@ export function createPassengers(host,cabin,{talk=null}={}){
   const open=(talking&&mod(t*7,2)<1)||pose==='laugh';R(x-1+ex,y+8+down,2,open?2:1,open?'#6a2a2a':shade(a.skin,.72));
   if(pose==='cross'||pose==='gesture')R(x-3+ex,y+4,2,1,shade(a.hair,.8));
  }
+ // A drunk stretched out along the seat, head where he sat and feet towards the free end.
+ function lying(m,x,by,t){
+  const a=m.app,d=m.lie,P=(dx,dy,w,h,col)=>R(d>0?x+dx:x-dx-w,by+dy,w,h,col),topLo=shade(a.top,.72);
+  const breathe=mod(t*.8+a.phase,2)<1?1:0,eye='#2a1c16';
+  R(x-4,by+36,8,6,'#e6dcc0');R(x-4,by+36,8,1,'#b04040');// the souvenir box, left on the floor
+  P(34,19,18,7,a.bottom);P(34,19,18,1,shade(a.bottom,1.3));P(51,16,4,9,'#1a1412');
+  P(8,16-breathe,27,10+breathe,a.top);P(8,24,27,2,topLo);if(a.tie)P(10,17-breathe,12,2,a.tie);
+  P(14,22,18,3,topLo);P(31,22,3,3,a.skin);P(10,24,3,10,topLo);P(10,34,3,2,a.skin);// one arm along him, one hanging off the seat
+  P(4,18,4,5,shade(a.skin,.82));P(-6,14,10,11,a.skin);P(-7,15,2,9,a.hair);P(-6,14,3,1,a.hair);P(-6,24,3,1,a.hair);
+  P(-1,17,2,1,eye);P(-1,21,2,1,eye);P(2,18,1,2+breathe,'#6a2a2a');P(-3,17,1,2,'#e0605888');P(-3,21,1,2,'#e0605888');
+  if(a.headTie)P(-5,14,2,11,a.tie);
+  kinds.zzz(d>0?x-2:x-1,by+8,t,a.phase);
+ }
  function seated(m,x,by,t,k=1){
+  if(m.pose==='lie'&&m.lie&&k>=1)return lying(m,x,by,t);
   // k eases 0→1 while sitting down; the body rises out of standing height.
   const a=m.app,look=m.look,lift=Math.round((1-k)*14);
   // A drunk sways, hiccups (a little jump) or slides down the seat; the arms reuse the ordinary poses.
-  const drunkPose=m.pose,pose={sway:'idle',hiccup:'idle',slump:'doze',sing:'gesture'}[drunkPose]??drunkPose;
+  // A sleeper leaning on a shoulder is a doze with the head tipped over towards them.
+  const drunkPose=m.pose,pose={sway:'idle',hiccup:'idle',slump:'doze',sing:'gesture',lean:'doze'}[drunkPose]??drunkPose;
   const hic=drunkPose==='hiccup'&&mod(m.pt||0,1.4)<.18?2:0;
   x+=drunkPose==='sway'?Math.round(Math.sin(t*1.6+a.phase)*1.5):drunkPose==='slump'?2:0;
   const bob=pose==='laugh'?Math.round(Math.abs(Math.sin(t*9))):Math.round(Math.sin(t*1.3+a.phase)*.5+.3)+hic;
-  const y=by-lift+(drunkPose==='slump'?3:0),nod=pose==='doze'?(mod(t*.35+a.phase,1)<.8?2:0):0,hx=x+(pose==='doze'?1:0)+(drunkPose==='slump'?2:0)+(look?look:0);
+  const y=by-lift+(drunkPose==='slump'?3:0),nod=drunkPose==='lean'?3:pose==='doze'?(mod(t*.35+a.phase,1)<.8?2:0):0,hx=x+(pose==='doze'?1:0)+(drunkPose==='slump'?2:0)+(look?look:0)+(drunkPose==='lean'?look*5:0);
   const top=a.top,topLo=shade(top,.72),pants=a.bottom,shoe='#1a1412';
   R(x-6,y+39,5,3,shoe);R(x+1,y+39,5,3,shoe);R(x-5,y+31,4,9,pants);R(x+1,y+31,4,9,pants);
   if(a.skirt){R(x-8,y+24,16,8,pants);R(x-5,y+32,4,7,shade(a.skin,.85));R(x+1,y+32,4,7,shade(a.skin,.85));}
@@ -279,6 +377,15 @@ export function createPassengers(host,cabin,{talk=null}={}){
   if(pose==='cross'){R(x-9,ty+2,3,10,topLo);R(x+6,ty+2,3,10,topLo);R(x-7,ty+10,14,4,topLo);R(x-6,ty+11,2,2,a.skin);R(x+4,ty+11,2,2,a.skin);}
   else if(pose==='gesture'){const w=Math.round(Math.sin(t*6)*1.5);R(x-9,ty+2,3,15,topLo);R(x-7,ty+17,3,2,a.skin);R(x+6,ty+2,3,7,topLo);R(x+8,ty-2+w,3,7,topLo);R(x+8,ty-4+w,3,3,a.skin);}
   else if(pose==='read'){R(x-9,ty+2,3,12,topLo);R(x+6,ty+2,3,12,topLo);R(x-7,ty+10,14,9,'#e6dcc0');R(x-7,ty+10,14,1,'#6b4a3a');R(x,ty+10,1,9,'#b8ad90');for(let i=0;i<3;i++){R(x-5,ty+13+i*2,4,1,'#9a917a');R(x+2,ty+13+i*2,4,1,'#9a917a');}R(x-8,ty+15,2,3,a.skin);R(x+6,ty+15,2,3,a.skin);}
+  else if(pose==='eat'){
+   // An ekiben on the lap; the chopsticks go up to the mouth and back.
+   const up=mod(t*.8+a.phase,1.6)<.5;R(x-9,ty+2,3,13,topLo);R(x+6,ty+2,3,8,topLo);R(x-6,ty+13,12,5,'#8a3030');R(x-5,ty+12,10,2,'#f4f0e8');R(x-1,ty+12,2,1,'#c04050');R(x+2,ty+12,2,1,'#6a9a4a');R(x-7,ty+15,2,2,a.skin);
+   if(up){R(x+4,ty-2,1,9,'#c8a070');R(x+6,ty-2,1,9,'#c8a070');R(x+5,ty+6,3,2,a.skin);}else{R(x+3,ty+6,1,7,'#c8a070');R(x+5,ty+6,1,7,'#c8a070');R(x+5,ty+10,3,2,a.skin);}
+  }
+  else if(pose==='knit'){
+   const w=mod(t*2+a.phase,1)<.5?1:0,yarn=a.scarf||'#b05070';R(x-9,ty+2,3,12,topLo);R(x+6,ty+2,3,12,topLo);R(x-5,ty+12,10,5,yarn);R(x-5,ty+12,10,1,shade(yarn,1.2));
+   R(x-7,ty+8+w,1,8,'#d8d0c0');R(x+6,ty+9-w,1,8,'#d8d0c0');R(x-8,ty+13,2,2,a.skin);R(x+5,ty+13,2,2,a.skin);R(x+10,y+21,5,5,yarn);R(x+11,y+22,2,1,shade(yarn,1.3));
+  }
   else if(pose==='phone'){R(x-9,ty+2,3,12,topLo);R(x+6,ty+2,3,12,topLo);R(x-6,ty+13,12,3,topLo);R(x-2,ty+11,5,6,'#1a1f2a');R(x-1,ty+12,3,4,'#7fb8e0');R(x-4,ty+15,3,2,a.skin);R(x+2,ty+15,3,2,a.skin);}
   else{R(x-9,ty+2,3,16,topLo);R(x+6,ty+2,3,16,topLo);R(x-8,ty+18,3,2,a.skin);R(x+5,ty+18,3,2,a.skin);}
   if(a.box){R(x+7,y+26,8,6,'#e6dcc0');R(x+7,y+26,8,1,'#b04040');R(x+10,y+23,2,3,'#b04040');}
@@ -295,29 +402,41 @@ export function createPassengers(host,cabin,{talk=null}={}){
   if(drunkPose==='hiccup'&&hic)R(hx+7,hy-2,2,2,'#e6dcc0aa');
   if(pose==='doze'&&mod(t*.35+a.phase,1)<.8)R(hx+6,hy-6,3,1,'#e6dcc088');
  }
+ // Standing poses for scenes: punch / reel (a scuffle), hold / held (pulling
+ // someone back, being pulled back), bow, and pick (crouching to the floor).
  function standing(m,x,h,t){
-  const a=m.app,dir=m.dir,walking=m.state==='walk'||m.state==='out',step=walking?Math.sin((t+a.phase)*(m.kind==='drunk'?5:8)):0,bob=walking?Math.round(Math.abs(step)):0,y=h-bob;
-  const top=a.top,topLo=shade(top,.72),pants=a.bottom;
+  const a=m.app,dir=m.dir,pose=m.pose,walking=m.state==='walk'||m.state==='out'||m.state==='step',step=walking?Math.sin((t+a.phase)*(m.kind==='drunk'?5:m.rush?12:8)):0,bob=walking?Math.round(Math.abs(step)):0,y=h-bob;
+  const top=a.top,topLo=shade(top,.72),pants=a.bottom,cr=pose==='pick'?9:0;
   if(m.kind==='drunk')x+=Math.round(Math.sin(t*2.2+a.phase)*3);
-  R(x-4+Math.round(step*3),y-30,4,28,pants);R(x+Math.round(-step*3),y-30,4,28,shade(pants,.85));
+  const ux=x+dir*({punch:2,reel:-2,bow:2,pick:2}[pose]||0)+(pose==='held'?Math.round(Math.sin(t*14)):0),uy=y+cr;
+  R(x-4+Math.round(step*3),y-30+cr,4,28-cr,pants);R(x+Math.round(-step*3),y-30+cr,4,28-cr,shade(pants,.85));
   R(x-5+Math.round(step*3),y-3,6,3,'#1a1412');R(x-1-Math.round(step*3),y-3,6,3,'#1a1412');
-  if(a.skirt)R(x-7,y-34,14,12,pants);
-  R(x-7,y-58,14,28,top);R(x-6,y-59,12,1,top);R(x,y-56,1,24,topLo);
-  if(a.scarf)R(x-6,y-59,12,3,a.scarf);
-  if(a.tie&&!a.headTie){R(x-2,y-58,4,2,'#e8e4dc');R(x,y-57,2,10,a.tie);}
-  R(x-3-Math.round(step*3),y-56,3,20,topLo);R(x-3-Math.round(step*3),y-37,3,2,a.skin);
-  if(a.box){const bx=x-3-Math.round(step*3);R(bx-2,y-33,8,6,'#e6dcc0');R(bx-2,y-33,8,1,'#b04040');R(bx+1,y-36,2,3,'#b04040');}
-  if(a.bag){R(x+(dir>0?-9:5),y-40,5,11,a.bag);R(x+(dir>0?-6:4),y-58,1,18,shade(a.bag,.7));}
-  R(x-2,y-61,4,3,shade(a.skin,.82));
-  const hy=y-72;R(x-5,hy,10,11,a.skin);face(a,x,hy,dir,t,'idle',false);hair(a,x,hy-1,dir);
-  if(a.flush){R(x-4,hy+7,2,1,'#e0605888');R(x+2,hy+7,2,1,'#e0605888');}
-  if(a.headTie){R(x-6,hy+1,12,2,a.tie);R(x+5,hy+1,3,1,a.tie);}
+  if(a.skirt)R(x-7,uy-34,14,12,pants);
+  R(ux-7,uy-58,14,28,top);R(ux-6,uy-59,12,1,top);R(ux,uy-56,1,24,topLo);
+  if(a.scarf)R(ux-6,uy-59,12,3,a.scarf);
+  if(a.tie&&!a.headTie){R(ux-2,uy-58,4,2,'#e8e4dc');R(ux,uy-57,2,10,a.tie);}
+  if(a.badge)R(ux+(dir>0?2:-4),uy-53,2,2,'#e0c060');
+  const F=(dx,dy,w,hh,col)=>R(dir>0?ux+dx:ux-dx-w,uy+dy,w,hh,col);// +dx is the way they face
+  if(pose==='punch'){F(5,-54,12,3,topLo);F(17,-55,3,4,a.skin);F(-2,-56,3,9,topLo);F(-2,-58,3,3,a.skin);}
+  else if(pose==='reel'){F(3,-60,3,10,topLo);F(3,-63,3,3,a.skin);F(-4,-56,3,16,topLo);}
+  else if(pose==='hold'){F(4,-54,10,3,topLo);F(4,-49,10,3,topLo);F(14,-54,2,8,a.skin);}
+  else if(pose==='held'){const f=mod(t*3,1)<.5?0:3;F(5,-60+f,3,12,topLo);F(5,-62+f,3,3,a.skin);F(-4,-56,3,14,topLo);}
+  else if(pose==='pick'){F(4,-54,3,18,topLo);F(4,-37,3,3,a.skin);}
+  else{R(ux-3-Math.round(step*3),uy-56,3,20,topLo);R(ux-3-Math.round(step*3),uy-37,3,2,a.skin);}
+  if(a.box){const bx=ux-3-Math.round(step*3);R(bx-2,uy-33,8,6,'#e6dcc0');R(bx-2,uy-33,8,1,'#b04040');R(bx+1,uy-36,2,3,'#b04040');}
+  if(a.bag){R(ux+(dir>0?-9:5),uy-40,5,11,a.bag);R(ux+(dir>0?-6:4),uy-58,1,18,shade(a.bag,.7));}
+  R(ux-2,uy-61,4,3,shade(a.skin,.82));
+  const hx=ux+(pose==='bow'?dir*3:pose==='reel'?-dir:0),hy=uy-72+(pose==='bow'?3:0),mood=['punch','reel','held'].includes(pose)?'cross':'idle';
+  R(hx-5,hy,10,11,a.skin);face(a,hx,hy,dir,t,mood,false);hair(a,hx,hy-1,dir);
+  if(a.flush){R(hx-4,hy+7,2,1,'#e0605888');R(hx+2,hy+7,2,1,'#e0605888');}
+  if(a.headTie){R(hx-6,hy+1,12,2,a.tie);R(hx+5,hy+1,3,1,a.tie);}
  }
  // An animal walks the aisle floor, jumps onto the cushion, and jumps back down.
  function animal(m,x,t){
   const {h,by}=geo,seatY=by+28;
   if(m.state==='seated')return kinds.animal(m,x+animalDrift(m),seatY,t,'seated');
-  if(m.state==='sit'||m.state==='rise'){const k=Math.min(1,m.t/SIT),e=m.state==='sit'?k:1-k,y=Math.round(h+(seatY-h)*e-Math.sin(Math.PI*e)*8);return kinds.animal(m,x,y,t,'jump');}
+  if(m.state==='floor')return kinds.animal(m,x+animalDrift(m),h,t,'seated');
+  if(m.state==='sit'||m.state==='rise'||m.state==='down'){const k=Math.min(1,m.t/SIT),e=m.state==='sit'?k:1-k,y=Math.round(h+(seatY-h)*e-Math.sin(Math.PI*e)*8);return kinds.animal(m,x,y,t,'jump');}
   kinds.animal(m,x,h,t,'walk');
  }
  // Zoomies and dances wander a few pixels along the seat (never far enough to reach the props).
@@ -337,10 +456,20 @@ export function createPassengers(host,cabin,{talk=null}={}){
  function draw(t=clock){
   if(!geo)return;clock=t;const {w,h,by,s}=geo,v=director.view;
   c.clearRect(0,0,w,h);
-  for(const m of v.members){
+  for(const m of [...v.members,...(v.staff?[v.staff]:[])]){
    if(m.delay>0||m.state==='gone')continue;const x=Math.round(m.x*w);
    if(SPECIES.includes(m.kind))animal(m,x,t);else person(m,x,by,h,t);
   }
+  // Spilled oranges on the floor, and a cartoon dust cloud over a scuffle.
+  for(const o of v.props){const x=Math.round(o.x*w);R(x-2,h-5,4,4,'#e8902a');R(x-1,h-6,2,1,'#e8902a');R(x-1,h-5,1,1,'#ffd08a');R(x,h-7,1,1,'#4a7a3a');}
+  if(v.dust){const f=v.members.filter(m=>m.pose==='punch'||m.pose==='reel');
+   if(f.length===2){const mx=Math.round((f[0].x+f[1].x)/2*w),y=h-48,puff=(x,y,r,col)=>{c.fillStyle=col;c.beginPath();c.arc(Math.round(x),Math.round(y),r,0,Math.PI*2);c.fill();};
+    // A rolling cartoon cloud over the two of them, a fist or a shoe poking out, and a star now and then.
+    for(let i=0;i<9;i++){const a=t*3+i*.7;puff(mx+Math.cos(a)*14,y+Math.sin(a*1.4)*12,8+(i%3)*2,'#6a6258');}
+    for(let i=0;i<9;i++){const a=t*3+i*.7;puff(mx+Math.cos(a)*14,y+Math.sin(a*1.4)*12-1,7+(i%3)*2,'#e8e0d0');}
+    const k=Math.floor(t*2.5)%4,sx=k%2?1:-1;
+    if(k<2){R(mx+sx*20-2,y-8+k*6,5,4,f[0].app.skin);R(mx+sx*14,y-7+k*6,6,2,shade(f[0].app.top,.72));}else R(mx+sx*20-2,y+14,6,3,'#1a1412');
+    if(mod(t,.9)<.3){const sy=y-24+Math.round(mod(t,.9)*10);lights.push([mx-1+sx*6,sy,3,3,'#ffe066'],[mx-3+sx*6,sy+1,7,1,'#ffe066'],[mx+sx*6,sy-2,1,7,'#ffe066']);}}}
   // match the cabin's night grade so people sit in the same light; eyes and antennae glow through it
   c.save();c.globalCompositeOperation='source-atop';c.fillStyle='rgba(12,7,4,.34)';c.fillRect(0,0,w,h);c.restore();
   for(const [lx,ly,lw,lh,col] of lights.splice(0))R(lx,ly,lw,lh,col);
@@ -367,6 +496,6 @@ export function createPassengers(host,cabin,{talk=null}={}){
   get muted(){return muted;},
   seed(ctx,size){director.seed(ctx,size,{width:geo?.w});draw();},
   tick(dt,t,{quiet=false}={}){if(!geo)return;geo.quiet=quiet;director.advance(dt,{width:geo.w,quiet});draw(t);},
-  get status(){const v=director.view;return {size:v.size,rel:v.rel,cast:v.cast,tone:v.tone,leaving:v.leaving,line:v.line?.text||null,members:v.members.map(m=>m.state),kinds:v.members.map(m=>m.kind),poses:v.members.map(m=>m.pose)};},
+  get status(){const v=director.view;return {size:v.size,rel:v.rel,cast:v.cast,tone:v.tone,scene:v.scene,leaving:v.leaving,line:v.line?.text||null,members:v.members.map(m=>m.state),kinds:v.members.map(m=>m.kind),poses:v.members.map(m=>m.pose)};},
  };
 }
