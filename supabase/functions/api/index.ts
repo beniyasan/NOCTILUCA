@@ -281,8 +281,17 @@ async function notionRoute(request: Request, url: URL, db: SupabaseClient, playe
   if (request.method === "GET" && path.endsWith("/notion/status")) return connectionView(row, notionReady());
   if (request.method === "GET" && path.endsWith("/notion/sources")) {
     if (!row) fail("NOTION_NOT_CONNECTED", "Notionと連携していません。", 409);
-    const data = await notionFetch(db, row, "/search", { method: "POST", body: JSON.stringify({ filter: { property: "object", value: "data_source" }, page_size: 50 }) });
-    return { sources: (data.results || []).filter((s: { in_trash?: boolean }) => !s.in_trash).map((s: { id: string; title?: unknown }) => ({ id: s.id, name: plain(s.title) || "無題のデータベース" })) };
+    // Follow Notion's cursor so every shared data source can be picked (capped to keep the request bounded).
+    const found: { id: string; title?: unknown; in_trash?: boolean }[] = [];
+    let cursor: string | undefined, truncated = false;
+    for (let page = 0; ; page++) {
+      if (page >= 10) { truncated = true; break; }
+      const data = await notionFetch(db, row, "/search", { method: "POST", body: JSON.stringify({ filter: { property: "object", value: "data_source" }, page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }) });
+      found.push(...(data.results || []));
+      if (!data.has_more || !data.next_cursor) break;
+      cursor = data.next_cursor;
+    }
+    return { truncated, sources: found.filter((s) => !s.in_trash).map((s) => ({ id: s.id, name: plain(s.title) || "無題のデータベース" })) };
   }
   if (request.method === "GET" && path.endsWith("/notion/source")) {
     const id = url.searchParams.get("id");

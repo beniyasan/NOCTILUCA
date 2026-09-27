@@ -65,5 +65,6 @@ test('Notion storage and routes stay server-side',async()=>{
  assert.ok(api.indexOf('LOGIN_REQUIRED')<api.indexOf('await notionRoute(request'));
  assert.match(api,/verifyState\(url\.searchParams\.get\("state"\), notionKey\)/);
  assert.match(api,/sealTokens\(\{ access: t\.access_token, refresh: t\.refresh_token \}/);
+ assert.match(api,/start_cursor: cursor/);assert.match(api,/data\.has_more/);
  assert.match(gateway,/notionPost\(action/);assert.doesNotMatch(sites,/notion/i);
 });

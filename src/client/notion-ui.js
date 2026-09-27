@@ -36,6 +36,7 @@ export function createNotionUI(gateway){
  async function loadSources(){
   await run(async()=>{
    const r=await gateway.notionSources();sources=r.sources;summary=null;
+   if(r.truncated)message('共有されたデータベースが多いため、先頭の1000件だけを表示しています。見つからないときは、連携しなおして共有するデータベースを絞ってください。');
    options($('notion-source'),sources.map(s=>[s.id,s.name]),sources.length?'選んでください':'共有されたデータベースがありません');
    if(status?.source&&sources.some(s=>s.id===status.source.id)){$('notion-source').value=status.source.id;}
   });
