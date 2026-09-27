@@ -14,7 +14,7 @@ export const ANIMAL_POSES={
  weasel:['stand','dash','curl','flat','groom','dance'],
  rabbit:['loaf','twitch','groom','flop','binky','stand'],
 };
-export const CAST_POSES={drunk:['sway','hiccup','doze','sing','slump','sway'],maid:['idle','ear','tidy','scan','tea','charge'],alien:['idle','curious','map','antenna','photo','idle']};
+export const CAST_POSES={drunk:['sway','hiccup','doze','sing','slump','sway','lie'],maid:['idle','ear','tidy','scan','tea','charge'],alien:['idle','curious','map','antenna','photo','idle']};
 // Short actions play once and hand back to a resting pose; the rest hold a while.
 export const ACTION_SECONDS={stretch:3,yawn:2.4,binky:1.6,hiccup:1.4,dash:4.5,dance:3.6,scratch:3,photo:2.6,tidy:5,groom:5,knead:5,tilt:3};
 // How fast each kind walks, relative to a person.
