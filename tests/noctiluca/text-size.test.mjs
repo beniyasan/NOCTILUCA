@@ -12,3 +12,10 @@ test('every px font size goes through a scalable variable that phones leave unto
  assert.match(scene,/@media\(min-width:691px\) and \(pointer:fine\)\{:root\{--text-min:12px\}:root\[data-text-size="large"\]\{--text-scale:1\.15\}:root\[data-text-size="xlarge"\]\{--text-scale:1\.3\}\}/);
  assert.match(html,/<select id="text-size"><option value="normal" selected>標準<\/option><option value="large">大きめ<\/option><option value="xlarge">特大<\/option><\/select>/);
 });
+test('first visit: a welcome card, a moving train, and no intro over a running timer',async()=>{
+ const [welcome,story,engine,html]=await Promise.all(['src/client/welcome-ui.js','src/client/story-ui.js','src/client/engine.js','src/client/index.template.html'].map(p=>readFile(p,'utf8')));
+ assert.match(welcome,/if\(seen\|\|s\.storyView\?\.introSeen\|\|visits>1\|\|s\.suspended\)return;/,'only on a fresh journey, once per device');
+ assert.match(welcome,/engine\.startMoving\?\.\(\)/);assert.match(engine,/startMoving\(\)\{/);
+ assert.match(story,/!engine\?\.timer\?\.active&&!document\.querySelector\('dialog\[open\]'\)/);
+ assert.match(html,/id="welcome-focus"[^>]*>集中して始める</);assert.match(html,/id="welcome-watch"[^>]*>しばらく眺める</);
+});

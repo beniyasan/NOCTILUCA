@@ -45,7 +45,8 @@ export function createStoryUI(g,engine){
  g.addEventListener('change',e=>{if(e.detail.reason==='journey.reset'){attemptedIntro=false;lastPageKey='';error='';}render();});
  const timer=setInterval(()=>{
   render();const s=g.snapshot.state;
-  if(!attemptedIntro&&!s.storyView.introSeen&&!s.storyView.active&&s.displayName&&!s.suspended&&!g.busy&&!g.blocked&&!document.querySelector('dialog[open]')){attemptedIntro=true;run(start);}
+  // Never open the intro over a running focus timer; it waits for the next quiet moment.
+  if(!attemptedIntro&&!s.storyView.introSeen&&!s.storyView.active&&s.displayName&&!s.suspended&&!g.busy&&!g.blocked&&!engine?.timer?.active&&!document.querySelector('dialog[open]')){attemptedIntro=true;run(start);}
  },500);
  window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});render();
  return {open:()=>run(start)};
