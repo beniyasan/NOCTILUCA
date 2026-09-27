@@ -3,6 +3,7 @@ import { checkState, freshState, reduce, viewState, exactKeys, object, GameError
 import data from "./game/content.js";
 import { DEFAULT_FEEDS, filterHeadlines, jstDay, parseFeed, responseText, sanitizeTalks, talkRequest } from "./passenger-talk.js";
 import { JOURNAL_LIMITS, journalCommand, journalDay, journalSummary, journalView } from "./journal.js";
+import { journalAiInput, journalAiRequest, journalAiText } from "./journal-ai.js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 const enc = new TextEncoder();
@@ -129,13 +130,42 @@ async function passengerTalk(url: URL) {
 
 // ---- work journal: signed-in players only, stored apart from the 64KB journey save ----
 const journalColumns = "day,body,entries,updated_at";
+const journalAiModel = env.JOURNAL_AI_MODEL || "gpt-6-luna";
+const journalAiLimit = Math.max(1, Math.min(20, Number(env.JOURNAL_AI_DAILY_LIMIT) || 3));
+async function journalAiStatus(db: SupabaseClient, playerId: string, today: string) {
+  const r = await db.from("journal_ai_runs").select("runs").eq("player_id", playerId).eq("day", today).maybeSingle();
+  if (r.error) throw r.error;
+  return { enabled: !!env.OPENAI_API_KEY, limit: journalAiLimit, remaining: Math.max(0, journalAiLimit - (r.data?.runs ?? 0)) };
+}
+// Nothing is saved here: the player reads (and may edit) the text before putting it in the memo.
+async function organizeJournal(db: SupabaseClient, playerId: string, today: string, day: string, level: string) {
+  if (!env.OPENAI_API_KEY) fail("AI_UNAVAILABLE", "AIでの整理は、いまは使えません。", 503);
+  const row = await db.from("work_journals").select(journalColumns).eq("player_id", playerId).eq("day", day).maybeSingle();
+  if (row.error) throw row.error;
+  const input = journalAiInput(journalView(row.data, day), level);
+  const claimed = await db.rpc("claim_journal_ai_run", { p_player_id: playerId, p_day: today, p_max: journalAiLimit });
+  if (claimed.error) throw claimed.error;
+  if (typeof claimed.data !== "number") fail("AI_LIMIT", `AIでの整理は1日${journalAiLimit}回までです。明日またお試しください。`, 429);
+  try {
+    const r = await timed("https://api.openai.com/v1/responses", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${env.OPENAI_API_KEY}` }, body: JSON.stringify(journalAiRequest({ model: journalAiModel, level, input })) }, 45000);
+    if (!r.ok) throw new Error(`OPENAI_${r.status} ${(await r.text()).slice(0, 400)}`);
+    const text = journalAiText(level, JSON.parse(responseText(await r.json()) || "{}"));
+    if (!text) throw new Error("NO_TEXT");
+    return { today, day, level, text, ai: await journalAiStatus(db, playerId, today) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown";
+    console.error("NOCTILUCA_JOURNAL_AI_FAILED", message);
+    await db.rpc("release_journal_ai_run", { p_player_id: playerId, p_day: today, p_error: message });
+    fail("AI_FAILED", "整理できませんでした。少し時間をおいて、もう一度お試しください(回数には数えていません)。", 502);
+  }
+}
 async function journalRoute(request: Request, url: URL, db: SupabaseClient, playerId: string) {
   const path = url.pathname, today = jstDay();
   if (request.method === "GET" && path.endsWith("/journal/day")) {
     const day = journalDay(url.searchParams.get("day"));
     const r = await db.from("work_journals").select(journalColumns).eq("player_id", playerId).eq("day", day).maybeSingle();
     if (r.error) throw r.error;
-    return { today, journal: journalView(r.data, day) };
+    return { today, journal: journalView(r.data, day), ai: await journalAiStatus(db, playerId, today) };
   }
   if (request.method === "GET" && path.endsWith("/journal/days")) {
     const before = url.searchParams.get("before");
@@ -152,6 +182,7 @@ async function journalRoute(request: Request, url: URL, db: SupabaseClient, play
   if (request.method !== "POST" || !path.endsWith("/journal")) return null;
   if (request.headers.get("x-noctiluca-client") !== "1") fail("CSRF", "この画面から操作をやり直してください。", 403);
   const change = journalCommand(await body(request), { id: crypto.randomUUID() });
+  if (change.action === "organize" && change.level) return await organizeJournal(db, playerId, today, change.day, change.level);
   if (change.action === "append" && change.entry) {
     const r = await db.rpc("append_work_journal_entry", { p_player_id: playerId, p_day: change.day, p_entry: change.entry });
     if (r.error) { if (r.error.message === "JOURNAL_FULL") fail("JOURNAL_FULL", `1日の記録は${JOURNAL_LIMITS.entries}件までです。`, 409); throw r.error; }

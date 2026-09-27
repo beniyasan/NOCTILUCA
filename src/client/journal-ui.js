@@ -23,7 +23,7 @@ export function journalMarkdown(doc){
 
 export function createJournalUI(gateway){
  const supported=typeof gateway.journalDay==='function',dialog=$('journal-dialog');
- let today=null,viewing=null,page=null,days=[],more=false,busy=false,noteEntry=null,editing=null,loadedList=false,drawn='',breaks=0;
+ let today=null,viewing=null,page=null,days=[],more=false,busy=false,noteEntry=null,editing=null,loadedList=false,drawn='',breaks=0,ai=null,aiResult=null,organizing=false;
  const signedIn=()=>supported&&gateway.authenticated;
  const errorText=e=>e?.code==='NETWORK'?'接続を確認できません。少し待ってから、もう一度お試しください。':e?.message||'日誌を保存できませんでした。';
  function message(text){$('journal-message').textContent=text;}
@@ -51,6 +51,29 @@ export function createJournalUI(gateway){
   // Rebuild only when the records or the row being edited change, so typing is never interrupted.
   const signature=viewing+'|'+editing+'|'+JSON.stringify(entries);if(signature!==drawn){drawn=signature;$('journal-entries').replaceChildren(...entries.map(entryRow));}
  }
+ const LEVEL_KEY='noctiluca.journal.aiLevel';
+ const level=()=>document.querySelector('input[name="journal-level"]:checked')?.value||'organize';
+ function paintAi(){
+  const section=$('journal-ai');section.hidden=!ai?.enabled;if(section.hidden)return;
+  const run=$('journal-ai-run'),result=aiResult?.day===viewing;
+  run.textContent=organizing?'整理しています…':'この日を整理する';run.disabled=busy||ai.remaining<=0;
+  $('journal-ai-remaining').textContent=ai.remaining>0?'今日はあと'+ai.remaining+'回（1日'+ai.limit+'回まで）':'今日の回数を使い切りました。明日また使えます。';
+  $('journal-ai-result').hidden=!result;for(const id of ['journal-ai-append','journal-ai-replace'])$(id).disabled=busy;
+ }
+ async function organize(){
+  if(busy)return;try{localStorage.setItem(LEVEL_KEY,level());}catch{/* remembering the choice is optional */}
+  busy=organizing=true;message('');paint();
+  try{const r=await gateway.journalOrganize(viewing,level());ai=r.ai;aiResult={day:r.day,text:r.text};$('journal-ai-text').value=r.text;message('整理しました。内容を確かめてから、メモに入れてください。');}
+  catch(e){if(e?.code==='AI_LIMIT')ai={...ai,remaining:0};message(e?.code==='NETWORK'?'応答がありませんでした。回数に数えられていないか、日誌を開き直して確かめてください。':errorText(e));}
+  finally{busy=organizing=false;paint();}
+ }
+ function applyAi(append){
+  const text=$('journal-ai-text').value.trim(),memo=$('journal-body').value.trim();if(!text)return;
+  const body=append&&memo?memo+'\n\n'+text:text;
+  if([...body].length>4000){message('メモは4000文字までです。追記せずに置き換えるか、内容を短くしてください。');return;}
+  if(!append&&memo&&!window.confirm('今のメモを、整理した内容で置き換えますか？'))return;
+  void run(async()=>{const r=await gateway.journalSend({action:'body',day:viewing,body});page=r.journal;$('journal-body').value=page.body;aiResult=null;},append?'メモに追記しました。':'メモを置き換えました。');
+ }
  function paintList(){
   const list=$('journal-days');list.replaceChildren(...days.map(d=>{
    const li=document.createElement('li'),b=document.createElement('button'),title=document.createElement('strong'),sub=document.createElement('span');
@@ -64,9 +87,9 @@ export function createJournalUI(gateway){
   $('journal-guest').hidden=signedIn();$('journal-main').hidden=!signedIn();
   for(const id of ['journal-body-save','journal-delete-day','journal-export','journal-delete-all','journal-more'])$(id).disabled=busy;
   $('journal-delete-day').hidden=!page||(!page.entries.length&&!page.body);
-  if(signedIn()){paintDay();paintList();}
+  if(signedIn()){paintDay();paintList();paintAi();}
  }
- async function openDay(day){await run(async()=>{const r=await gateway.journalDay(day);today=r.today;viewing=r.journal.day;page=r.journal;editing=null;$('journal-body').value=page.body;setTab(false);});}
+ async function openDay(day){await run(async()=>{const r=await gateway.journalDay(day);today=r.today;viewing=r.journal.day;page=r.journal;ai=r.ai||null;editing=null;$('journal-body').value=page.body;setTab(false);});}
  async function loadList(append=false){await run(async()=>{const r=await gateway.journalDays(append?days.at(-1)?.day:undefined);today=r.today;days=append?days.concat(r.days):r.days;more=r.more;loadedList=true;});}
  async function open(){message('');paint();if(!dialog.open)dialog.showModal();if(signedIn()){setTab(false);await openDay();}}
  async function download(){
@@ -87,6 +110,11 @@ export function createJournalUI(gateway){
  $('journal-delete-day')?.addEventListener('click',()=>{if(!window.confirm(dayLabel(viewing)+'の日誌を削除しますか？元に戻せません。'))return;void run(async()=>{const r=await gateway.journalSend({action:'delete-day',day:viewing});page=r.journal;$('journal-body').value='';loadedList=false;},'この日の日誌を削除しました。');});
  $('journal-delete-all')?.addEventListener('click',()=>{if(!window.confirm('すべての作業日誌を削除しますか？元に戻せません。'))return;void run(async()=>{await gateway.journalSend({action:'delete-all'});days=[];more=false;page={day:viewing,body:'',entries:[]};$('journal-body').value='';},'すべての日誌を削除しました。');});
  $('journal-export')?.addEventListener('click',()=>void download());
+ $('journal-ai-run')?.addEventListener('click',()=>void organize());
+ $('journal-ai-append')?.addEventListener('click',()=>applyAi(true));
+ $('journal-ai-replace')?.addEventListener('click',()=>applyAi(false));
+ $('journal-ai-discard')?.addEventListener('click',()=>{aiResult=null;paint();});
+ try{const saved=localStorage.getItem(LEVEL_KEY),input=document.querySelector('input[name="journal-level"][value="'+saved+'"]');if(input)input.checked=true;}catch{/* default level */}
 
  // Break-time note in the window timer: appears once the finished session is on today's page.
  const noteForm=$('timer-journal-note'),noteInput=$('timer-journal-input');
@@ -103,6 +131,6 @@ export function createJournalUI(gateway){
   breakEnded(){breaks++;showNote(null);},
   recordTask(text){void record({action:'task',text});}
  };
- gateway.addEventListener('change',e=>{if(['reload','guest'].includes(e.detail.reason)){showNote(null);page=null;days=[];loadedList=false;}paint();});
+ gateway.addEventListener('change',e=>{if(['reload','guest'].includes(e.detail.reason)){showNote(null);page=null;days=[];loadedList=false;aiResult=null;ai=null;}paint();});
  paint();return api;
 }
