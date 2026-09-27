@@ -16,7 +16,7 @@
     "sync:lolipop": "node scripts/sync-game.mjs && node scripts/sync-lolipop.mjs",
     "build:lolipop": "node scripts/build-lolipop.mjs",
     "prebuild": "node scripts/sync-game.mjs",
-    "test:game": "node --test tests/noctiluca/api.test.mjs tests/noctiluca/commerce.test.mjs tests/noctiluca/sites-runtime.test.mjs tests/noctiluca/timer.test.mjs tests/noctiluca/moments.test.mjs tests/noctiluca/passengers.test.mjs tests/noctiluca/passenger-talk.test.mjs tests/noctiluca/frontier.test.mjs tests/noctiluca/sidequests.test.mjs tests/noctiluca/sidequests-ui.test.mjs tests/noctiluca/lolipop.test.mjs"
+    "test:game": "node --test tests/noctiluca/api.test.mjs tests/noctiluca/commerce.test.mjs tests/noctiluca/sites-runtime.test.mjs tests/noctiluca/timer.test.mjs tests/noctiluca/journal.test.mjs tests/noctiluca/moments.test.mjs tests/noctiluca/passengers.test.mjs tests/noctiluca/passenger-talk.test.mjs tests/noctiluca/frontier.test.mjs tests/noctiluca/sidequests.test.mjs tests/noctiluca/sidequests-ui.test.mjs tests/noctiluca/lolipop.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

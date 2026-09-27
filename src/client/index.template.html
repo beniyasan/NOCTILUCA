@@ -52,6 +52,7 @@
        <button type="button" id="timer-overlay-stop" hidden>終了</button>
       </div>
       <p id="timer-overlay-message" class="timer-status" role="status" hidden></p>
+      <form id="timer-journal-note" class="timer-journal-note" hidden><label for="timer-journal-input">この区間でできたこと</label><div class="timer-task-entry"><input id="timer-journal-input" type="text" maxlength="200" autocomplete="off" placeholder="例：構成案を3つ出せた"><button type="submit" id="timer-journal-save">日誌に残す</button></div><p id="timer-journal-message" class="timer-status" role="status"></p></form>
       <details id="timer-tasks" hidden>
        <summary>タスク一覧・追加</summary>
        <ul id="timer-task-list" aria-label="未完了のタスク"></ul>
@@ -86,6 +87,7 @@
     <div class="journey"><div class="journey-head"><span><i class="dot"></i><span id="journey-mode">外縁環状線・自動周遊</span></span><span id="journey-count">1 周目</span></div><div class="rail-map" id="rail-map" aria-label="各都市へ移動"></div><div class="next-label"><span id="next-label">次は 蒼海ドック</span><span id="countdown">02:00</span></div></div>
     <div class="controls-wrap">
      <button type="button" class="focus-entry" id="timer-open" aria-haspopup="dialog" aria-controls="timer-dialog"><span>集中する</span><span id="timer-mini">25分</span><span aria-hidden="true">↗</span></button>
+     <button type="button" class="journal-entry" id="journal-open" aria-haspopup="dialog" aria-controls="journal-dialog" hidden>作業日誌</button>
      <div class="controls">
       <button class="control play" id="pause" aria-label="一時停止" aria-pressed="false" title="一時停止 / 再生 (Space)"><svg><use href="#i-pause"/></svg></button>
       <button class="control" id="sound" aria-label="音楽と環境音を設定" aria-haspopup="dialog" title="音楽と環境音"><svg><use href="#i-muted"/></svg></button>
@@ -125,6 +127,30 @@
   </form>
   <p id="timer-message" role="status"></p>
   <button type="button" id="timer-settings-open" class="timer-settings-link" aria-haspopup="dialog" aria-controls="timer-settings-dialog">長い休憩・駅間時間・到着ベルを設定</button>
+ </div>
+</dialog>
+<dialog id="journal-dialog" aria-labelledby="journal-title">
+ <div class="route-header"><div><div class="eyebrow">WORK LOG</div><h2 id="journal-title">作業日誌</h2></div><button type="button" class="icon-button" id="journal-close" aria-label="作業日誌を閉じる">×</button></div>
+ <div class="journal-panel">
+  <p id="journal-guest" class="journal-guest" hidden>ログインすると、集中した時間や終えたタスクが日ごとに残り、メモも書けます。書いた日誌は、あとから読み返したり書き出したりできます。</p>
+  <div id="journal-main">
+   <div class="journal-tabs" role="tablist" aria-label="作業日誌の表示"><button type="button" role="tab" id="journal-tab-day" aria-selected="true" aria-controls="journal-day">今日</button><button type="button" role="tab" id="journal-tab-list" aria-selected="false" aria-controls="journal-list">これまで</button></div>
+   <section id="journal-day" role="tabpanel" aria-labelledby="journal-tab-day">
+    <div class="journal-day-head"><h3 id="journal-date"></h3><button type="button" id="journal-today" class="journal-link" hidden>今日の日誌へ</button></div>
+    <p id="journal-stats" class="journal-stats"></p>
+    <ol id="journal-entries" class="journal-entries" aria-label="この日の記録"></ol>
+    <p id="journal-empty" class="journal-empty">集中タイマーで作業を終えたり、タスクを完了したりすると、ここに記録されます。</p>
+    <form id="journal-body-form" class="journal-body"><label for="journal-body">メモ</label><textarea id="journal-body" maxlength="4000" rows="6" placeholder="気づいたこと、明日やること など"></textarea><div class="journal-actions"><button type="submit" id="journal-body-save">メモを保存</button><button type="button" id="journal-delete-day" class="journal-danger">この日の日誌を削除</button></div></form>
+   </section>
+   <section id="journal-list" role="tabpanel" aria-labelledby="journal-tab-list" hidden>
+    <ul id="journal-days" class="journal-days" aria-label="日誌のある日"></ul>
+    <p id="journal-days-empty" class="journal-empty" hidden>まだ日誌はありません。</p>
+    <button type="button" id="journal-more" class="journal-link" hidden>さらに前の日を見る</button>
+    <div class="journal-actions"><button type="button" id="journal-export">すべて書き出す（Markdown）</button><button type="button" id="journal-delete-all" class="journal-danger">すべての日誌を削除</button></div>
+    <p class="timer-help">書き出しには、日ごとの作業時間・目標・ひとこと・完了したタスク・メモが入ります。旅の記録を初期化しても日誌は消えません。</p>
+   </section>
+   <p id="journal-message" class="timer-status" role="status"></p>
+  </div>
  </div>
 </dialog>
 <dialog id="timer-settings-dialog" aria-labelledby="timer-settings-title">

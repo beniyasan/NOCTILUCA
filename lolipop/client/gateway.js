@@ -29,6 +29,11 @@ export class Gateway extends EventTarget {
  async retry(){if(!this.pending||this.busy)return;this.busy++;try{return await this.commit(this.pending);}finally{this.busy--;this.emit('idle');}}
  async reload(){if(this.busy)return;const r=await this.request('/session');this.pending=null;this.snapshot=r;this.error=null;this.persistPending();this.emit('reload');return r;}
  async export(){return this.request('/export');}
+ // Work journal (signed-in only). Stored apart from the journey save, so it skips the pending/retry queue.
+ journalDay(day){return this.request('/journal/day'+(day?'?day='+encodeURIComponent(day):''));}
+ journalDays(before){return this.request('/journal/days'+(before?'?before='+encodeURIComponent(before):''));}
+ journalSend(payload){return this.request('/journal',{method:'POST',headers:{'Content-Type':'application/json','X-Noctiluca-Client':'1'},body:JSON.stringify(payload)});}
+ journalExport(){return this.request('/journal/export');}
  // Passenger talk from the day's headlines; null means "use the templates".
  passengerTalk(ask){try{return this.talkPool.take(ask);}catch{return null;}}
 }

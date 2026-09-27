@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { checkState, freshState, reduce, viewState, exactKeys, object, GameError, CONTENT_VERSION, SUPPORTED_CONTENT_VERSIONS, WORLDS } from "./game/rules.js";
 import data from "./game/content.js";
 import { DEFAULT_FEEDS, filterHeadlines, jstDay, parseFeed, responseText, sanitizeTalks, talkRequest } from "./passenger-talk.js";
+import { JOURNAL_LIMITS, journalCommand, journalDay, journalSummary, journalView } from "./journal.js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 const enc = new TextEncoder();
@@ -126,6 +127,56 @@ async function passengerTalk(url: URL) {
   return { day, batches: pool.batches, maxBatches: talkMaxBatches, generating, talks: pool.talks };
 }
 
+// ---- work journal: signed-in players only, stored apart from the 64KB journey save ----
+const journalColumns = "day,body,entries,updated_at";
+async function journalRoute(request: Request, url: URL, db: SupabaseClient, playerId: string) {
+  const path = url.pathname, today = jstDay();
+  if (request.method === "GET" && path.endsWith("/journal/day")) {
+    const day = journalDay(url.searchParams.get("day"));
+    const r = await db.from("work_journals").select(journalColumns).eq("player_id", playerId).eq("day", day).maybeSingle();
+    if (r.error) throw r.error;
+    return { today, journal: journalView(r.data, day) };
+  }
+  if (request.method === "GET" && path.endsWith("/journal/days")) {
+    const before = url.searchParams.get("before");
+    let q = db.from("work_journals").select(journalColumns).eq("player_id", playerId).order("day", { ascending: false }).limit(JOURNAL_LIMITS.listDays);
+    if (before) q = q.lt("day", journalDay(before));
+    const r = await q; if (r.error) throw r.error;
+    return { today, days: (r.data ?? []).map(journalSummary), more: (r.data ?? []).length === JOURNAL_LIMITS.listDays };
+  }
+  if (request.method === "GET" && path.endsWith("/journal/export")) {
+    const r = await db.from("work_journals").select(journalColumns).eq("player_id", playerId).order("day", { ascending: true }).limit(5000);
+    if (r.error) throw r.error;
+    return { format: "noctiluca-work-journal", version: 1, exportedAt: new Date().toISOString(), days: (r.data ?? []).map((row) => journalView(row, row.day)) };
+  }
+  if (request.method !== "POST" || !path.endsWith("/journal")) return null;
+  if (request.headers.get("x-noctiluca-client") !== "1") fail("CSRF", "この画面から操作をやり直してください。", 403);
+  const change = journalCommand(await body(request), { id: crypto.randomUUID() });
+  if (change.action === "append" && change.entry) {
+    const r = await db.rpc("append_work_journal_entry", { p_player_id: playerId, p_day: change.day, p_entry: change.entry });
+    if (r.error) { if (r.error.message === "JOURNAL_FULL") fail("JOURNAL_FULL", `1日の記録は${JOURNAL_LIMITS.entries}件までです。`, 409); throw r.error; }
+    return { today, entryId: change.entry.id, journal: journalView(r.data, change.day) };
+  }
+  if (change.action === "note") {
+    const r = await db.rpc("set_work_journal_note", { p_player_id: playerId, p_day: change.day, p_entry_id: change.entryId, p_note: change.note });
+    if (r.error) { if (r.error.message === "JOURNAL_ENTRY_MISSING") fail("JOURNAL_ENTRY_MISSING", "この記録は見つかりません。日誌を開き直してください。", 404); throw r.error; }
+    return { today, journal: journalView(r.data, change.day) };
+  }
+  if (change.action === "body") {
+    const r = await db.from("work_journals").upsert({ player_id: playerId, day: change.day, body: change.body, updated_at: new Date().toISOString() }, { onConflict: "player_id,day" }).select(journalColumns).single();
+    if (r.error) throw r.error;
+    return { today, journal: journalView(r.data, change.day) };
+  }
+  if (change.action === "delete-day") {
+    const r = await db.from("work_journals").delete().eq("player_id", playerId).eq("day", change.day);
+    if (r.error) throw r.error;
+    return { today, journal: journalView(null, change.day) };
+  }
+  const r = await db.from("work_journals").delete().eq("player_id", playerId);
+  if (r.error) throw r.error;
+  return { today, deleted: true };
+}
+
 async function handle(request: Request) {
   const url = new URL(request.url); if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors() });
   const currentUser = await user(request); if (url.pathname.endsWith("/catalog")) return response({ worlds: WORLDS, topics: data.topics, people: data.npcs.map(({ id, name, role, en, where, detail, coat, hat, world }) => ({ id, name, role, en, where, detail, coat, hat, world })) }, 200, cors());
@@ -133,6 +184,7 @@ async function handle(request: Request) {
   if (!currentUser && url.pathname.endsWith("/session")) return response({ authenticated: false, mode: "supabase" }, 200, cors());
   if (!currentUser) return response({ error: { code: "LOGIN_REQUIRED", message: "旅を保存するにはログインしてください。" } }, 401, cors());
   const db = admin(); const row = await journey(db, currentUser.id); const owner = currentUser.id;
+  if (url.pathname.includes("/journal")) { const journal = await journalRoute(request, url, db, owner); if (journal) return response(journal, 200, cors()); }
   if (request.method === "GET" && url.pathname.endsWith("/session")) return response({ authenticated: true, mode: "supabase", ...envelope(row) }, 200, cors());
   if (request.method === "GET" && url.pathname.endsWith("/export")) return response(await backup(row, owner), 200, { ...cors(), "content-disposition": "attachment; filename=\"noctiluca-journey.json\"" });
   if (request.method !== "POST" || !url.pathname.endsWith("/commands")) return response({ error: { code: "NOT_FOUND", message: "そのAPIはありません。" } }, 404, cors());

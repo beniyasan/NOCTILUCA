@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-export function createTimerTasksUI(g,active){
+export function createTimerTasksUI(g,active,onComplete){
  const list=$('timer-task-list'),input=$('timer-task-input'),composer=$('timer-task-composer'),toggle=$('timer-task-toggle');let busy=false,last='',editingPlayer=g.snapshot.playerId,messageExpiresAt=0;
  function message(text,temporary=false){$('timer-task-message').textContent=text;messageExpiresAt=temporary?Date.now()+3000:0;}
  function render(){
@@ -15,7 +15,7 @@ export function createTimerTasksUI(g,active){
    for(const task of tasks){
     const row=document.createElement('li'),text=document.createElement('span'),button=document.createElement('button');
     row.className='timer-task-row';text.textContent=task.text;button.type='button';button.textContent='完了';button.dataset.taskId=task.id;button.setAttribute('aria-label',task.text+'を完了して一覧から削除');
-    button.addEventListener('click',()=>send('complete',{id:task.id}));row.append(text,button);list.append(row);
+    button.addEventListener('click',()=>void send('complete',{id:task.id}).then(ok=>{if(ok)onComplete?.(task);}));row.append(text,button);list.append(row);
    }
    if(focused)(composer.open?input:toggle).focus({preventScroll:true});
   }
@@ -25,8 +25,8 @@ export function createTimerTasksUI(g,active){
  async function send(action,payload){
   if(busy||g.busy||g.blocked||!active())return;
   busy=true;message('保存中…');render();
-  try{await g.send('focus.task.'+action,payload);}
-  catch(e){message(e.message+(g.blocked?' 「旅の記録」で保存を確認してください。':''));}
+  try{await g.send('focus.task.'+action,payload);return true;}
+  catch(e){message(e.message+(g.blocked?' 「旅の記録」で保存を確認してください。':''));return false;}
   finally{busy=false;render();}
  }
  $('timer-task-form').addEventListener('submit',e=>{e.preventDefault();if(!e.target.reportValidity()||!input.value.trim())return;void send('add',{text:input.value.trim()});});
