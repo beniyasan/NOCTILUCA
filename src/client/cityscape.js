@@ -156,6 +156,22 @@ function heroWaterB(c,x,p,r,base=319){
  for(let k=0;k<5;k++)rect(c,x+80,130+k*26,24,6,k%2?p.neon:p.light);
  rect(c,x+10,base-57,110,57,p.mid);rect(c,x+10,base-61,110,5,p.trim);for(let k=0;k<5;k++)rect(c,x+18+k*20,base-47,12,14,p.light+'bb');sign(c,x+14,base-23,102,16,p,r,false,'PILOT 12');
 }
+function heroRockB(c,x,p,r){
+ // A mesa of carved balconies with a cage lift running up its face.
+ boulder(c,x-30,450,230,280,p,r);for(let k=0;k<4;k++){const yy=210+k*46;rect(c,x+10+k*6,yy,120-k*12,26,'#241c22');rect(c,x+6+k*6,yy+26,128-k*12,4,p.trim);for(let j=0;j<3;j++)rect(c,x+20+k*6+j*34,yy+6,18,14,(k+j)%2?p.light+'cc':p.accent+'66');}
+ line(c,x+210,150,x+210,450,p.trim,3);line(c,x+232,150,x+232,450,p.trim,3);rect(c,x+204,144,34,8,p.near);rect(c,x+208,300,26,30,p.near);rect(c,x+211,304,20,12,p.light+'aa');sign(c,x+242,200,16,60,p,r,true,'昇降');sign(c,x+20,176,90,16,p,r,false,'LIFT / 3');
+}
+function heroGardenB(c,x,p,r){
+ // A conservatory of stacked glass domes, vines spilling from each tier.
+ for(let k=0;k<3;k++){const w=150-k*36,xx=x+k*18,yy=370-k*70;rect(c,xx,yy-56,w,56,'#1f4a4499');dome(c,xx,yy-56,w,34,p,r,' ');for(let j=0;j<=4;j++)line(c,xx+j*w/4,yy-56,xx+j*w/4,yy,p.trim+'aa');for(let j=0;j<5;j++)gardenTree(c,xx+8+j*w/5,yy-4,22,r,p,j%2===0);}
+ sign(c,x+160,250,16,56,p,r,true,'温室塔');sign(c,x+14,376,120,15,p,r,false,'LOTUS HALL');
+}
+function heroVoidB(c,x,p,r){
+ // A receiving station: a big dish on a lattice mast.
+ for(const dx of [20,70])line(c,x+dx,378,x+45,230,p.trim,3);for(let yy=250;yy<370;yy+=20)line(c,x+28,yy,x+62,yy+12,p.trim);
+ ellipse(c,x+45,214,58,20,p.mid);ellipse(c,x+45,210,52,15,'#1a2240');line(c,x+45,210,x+45,170,p.trim,2);rect(c,x+41,166,8,6,p.accent);glow(c,x+39,164,12,8,p.accent,10);
+ rect(c,x-10,340,110,38,p.mid);for(let k=0;k<4;k++)rect(c,x-2+k*26,350,16,12,p.light+'aa');sign(c,x+110,280,18,62,p,r,true,'受信所');
+}
 function heroDesert(c,x,p,r){
  industry(c,x,352,108,220,p,r);const tx=x+117;rect(c,tx,127,29,225,p.mid);rect(c,tx+5,113,19,16,p.trim);for(let yy=137;yy<342;yy+=22){rect(c,tx-5,yy,39,5,p.trim);for(let xx=tx;xx<tx+29;xx+=6)rect(c,xx,yy+3,2,7,p.near);}poly(c,[[tx,127],[tx+6,100],[tx+22,100],[tx+29,127]],p.near);rect(c,tx+4,97,21,4,p.neon);pipe(c,[[x+20,230],[x-21,230],[x-21,306],[tx+45,306],[tx+45,257]],p,6);sign(c,x-14,245,17,58,p,r,true,'赤砂');
  const bx=x+24,by=164;ellipse(c,bx,by,36,36,p.near);ellipse(c,bx,by,32,32,p.trim);ellipse(c,bx,by,27,27,'#302531');ellipse(c,bx,by,23,23,p.neon);ellipse(c,bx,by,17,17,'#352532');for(let i=0;i<8;i++){const a=i*Math.PI/4;line(c,bx+Math.cos(a)*7,by+Math.sin(a)*7,bx+Math.cos(a)*22,by+Math.sin(a)*22,p.light,2);}text(c,'SOL-41',bx,by+47,p.light,1,'center');
@@ -207,7 +223,7 @@ function createLayer(p,depth,width){
   // One carefully composed landmark in every strip, plus a second far away.
   const heroX=width<420?Math.max(65,width*.31):width*.27;
   const heroes={neon:heroNeon,scrap:heroScrap,water:heroWater,rock:heroRock,garden:heroGarden,ivory:heroIvory,void:heroVoid,desert:heroDesert};
-  const second={neon:heroNeonB}[p.kind]||heroes[p.kind];
+  const second={neon:heroNeonB,garden:heroGardenB,void:heroVoidB}[p.kind]||heroes[p.kind];
   heroes[p.kind](c,heroX,p,r);second(c,heroX+1180,p,r);
   c.globalAlpha=.05;rect(c,0,0,TILE,HEIGHT,p.haze);c.globalAlpha=1;return e;
  }
@@ -327,7 +343,8 @@ function specializedLayer(p,depth,width){
    for(let x=-120;x<TILE;x+=180){const pp={...p,mid:'#5d4850',near:'#3d3743',trim:'#82665f'};boulder(c,x,410,ir(r,140,250),ir(r,180,320),pp,r,false);}
   }else if(depth===1){
    for(let x=-80;x<TILE;x+=450)boulder(c,x,450,170,ir(r,180,255),p,r);
-   for(const h of [hx,hx+1180]){
+   for(const [i,h] of [hx,hx+1180].entries()){
+    if(i){heroRockB(c,h,p,r);continue;}
     boulder(c,h-53,450,243,311,p,r);boulder(c,h+345,450,91,275,p,r);
     for(let k=0;k<3;k++){const xx=h-12+k*48,yy=278+(k%2)*28;rect(c,xx,yy,39,41,p.near);rect(c,xx-4,yy-3,48,4,p.trim);windowGrid(c,xx+2,yy+3,35,35,p,r);rect(c,xx-4,yy+41,48,4,p.trim);}
     sign(c,h+20,275,65,14,p,r,false,'RIDGE / 41');
