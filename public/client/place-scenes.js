@@ -103,6 +103,16 @@ export function createPlaceScenes(a){
      }
      line(c,x+136,200,x+670,200,p.trim,2);
      for(const xx of [136,670]){line(c,x+xx,179,x+xx,260,p.trim,3);rect(c,x+xx-5,194,10,5,p.near);}
+     // The three crossings of a tile differ: plain, flagged with a shrine, or lit beside a fall.
+     const bi=Math.round(x/768)%3;
+     if(bi===1){
+      for(let k=0;k<14;k++){const u=(k+.5)/14,xx=x+150+u*505,yy=215+Math.sin(u*Math.PI)*14;line(c,xx,yy-8,xx+4,yy,p.trim);rect(c,xx,yy,6,8,['#c85a5a','#e0b060','#6a9ac8','#e8e0d0','#6aa86a'][k%5]);}
+      rect(c,x+688,124,40,26,p.near);poly(c,[[x+682,124],[x+708,108],[x+734,124]],p.trim);rect(c,x+702,132,12,12,p.light+'99');
+     }else if(bi===2){
+      rect(c,x+642,150,12,300,'#8fc8d844');rect(c,x+646,150,3,300,'#d8f4f866');
+      for(let k=1;k<5;k++){const u=k/5,xx=x+136+u*534,yy=260+Math.sin(u*Math.PI)*21;line(c,xx,yy,xx,yy+12,p.trim);ellipse(c,xx,yy+16,4,5,'#ffb347');}
+      for(let k=0;k<3;k++){rect(c,x+30+k*30,300,16,20,p.near);rect(c,x+34+k*30,304,8,8,p.light+'99');}
+     }
     }
    }else for(let x=0;x<TILE;x+=1152){cliff(c,x-28,500,152,550,p,r,true);}
   }
@@ -141,7 +151,7 @@ export function createPlaceScenes(a){
    const clock=t+cell*13;
    if(p.kind==='scrap'){workshopLife(c,p,x,clock,quiet,s.momentState,cell);return;}
    if(p.kind==='garden'){groveLife(c,p,x,clock,quiet);return;}
-   if(p.kind==='void'){relayLife(c,p,x,clock,quiet);return;}
+   if(p.kind==='void'){relayLife(c,p,x,clock,quiet);if(cell===2&&mod(clock,3)<.4)rect(c,x+523,243,6,8,p.accent);return;}
    if(p.kind==='neon'){
     for(let j=0;j<4;j++){
      if(j===1||j===3)continue; // Cat café and closing stall have their own actors.
@@ -191,7 +201,7 @@ export function createPlaceScenes(a){
     const sway=move?Math.sin(clock*.8)*.015+kick:0;
     rect(c,xx-7,197,14,5,p.near);ellipse(c,xx-4,199,3,3,p.trim);ellipse(c,xx+4,199,3,3,p.trim);
     c.save();c.translate(xx,202);c.rotate(sway);line(c,0,0,0,34,p.trim,2);
-    rect(c,-17,34,34,23,p.near);rect(c,-14,37,28,15,'#726658');line(c,-17,34,17,34,p.trim,2);
+    rect(c,-17,34,34,23,p.near);rect(c,-14,37,28,15,['#726658','#5a6a8a','#6a5a4a'][cell]);line(c,-17,34,17,34,p.trim,2);
     rect(c,-9,40,7,6,p.light+'88');line(c,8,35,8,56,p.trim);c.restore();
     // Windborne dust is restricted to the open gap, then occluded by near rock.
     for(let n=0;n<(quiet?6:18);n++){
@@ -200,6 +210,7 @@ export function createPlaceScenes(a){
      line(c,xx,310+n%6*19+Math.sin(clock*.3+n)*3,xx+7,310+n%6*19,p.light);
     }
     c.globalAlpha=1;
+    if(cell===2)for(let n=0;n<(quiet?3:7);n++){const f=mod(clock*.9+n/7,1);rect(c,x+644+(n%3)*3,150+f*300,2,10,'#e8fbff88');}
    }
   });
  }
@@ -299,11 +310,26 @@ export function createPlaceScenes(a){
      for(let j=0;j<9;j++)leaves(c,xx+ir(r,-75,85),ir(r,30,290),ir(r,22,53),'#3e685c');
     }
    }else if(depth===1){
-    // Architecture glimpsed through the grove, not a skyline topped by trees.
-    poly(c,[[x+165,375],[x+165,264],[x+304,220],[x+462,264],[x+462,375]],'#2b5955');
-    poly(c,[[x+179,360],[x+179,273],[x+304,234],[x+447,273],[x+447,360]],'#83ac9255');
-    for(let k=0;k<7;k++){const xx=x+181+k*43;line(c,xx,274,xx,365,p.trim,2);line(c,xx,274,x+304,232,p.trim);}
-    line(c,x+174,308,x+452,308,p.trim,2);
+    // Architecture glimpsed through the grove, not a skyline topped by trees:
+    // a glasshouse, a round conservatory or a tea pavilion, one per block.
+    const bi=Math.round(x/768)%3;
+    if(bi===1){
+     const arc=(rx,ry)=>{const pts=[];for(let i=0;i<=16;i++){const a=Math.PI*i/16;pts.push([x+313-Math.cos(a)*rx,375-Math.sin(a)*ry]);}return pts;};
+     poly(c,arc(148,150),'#2b5955');poly(c,arc(134,136),'#83ac9255');
+     for(let k=1;k<7;k++){const xx=x+313-134+k*38.3,dy=Math.sqrt(Math.max(0,134*134-Math.pow(xx-x-313,2)))*136/134;line(c,xx,375-dy,xx,365,p.trim,2);}
+     line(c,x+192,308,x+434,308,p.trim,2);rect(c,x+305,218,16,8,p.trim);
+    }else if(bi===2){
+     for(const xx of [190,426])rect(c,x+xx,290,10,85,'#4a3a30');
+     rect(c,x+200,300,226,60,'#e8d8a022');
+     poly(c,[[x+160,296],[x+313,246],[x+466,296],[x+446,304],[x+180,304]],'#3a2a2a');
+     poly(c,[[x+230,250],[x+313,212],[x+396,250],[x+380,256],[x+246,256]],'#3a2a2a');rect(c,x+262,256,102,34,'#4a3a30');rect(c,x+276,262,74,20,'#e8d8a066');
+     for(const xx of [205,421]){line(c,x+xx,304,x+xx,312,p.trim);ellipse(c,x+xx,320,6,8,'#c8503a');rect(c,x+xx-2,316,4,6,'#ffd08a');}
+    }else{
+     poly(c,[[x+165,375],[x+165,264],[x+304,220],[x+462,264],[x+462,375]],'#2b5955');
+     poly(c,[[x+179,360],[x+179,273],[x+304,234],[x+447,273],[x+447,360]],'#83ac9255');
+     for(let k=0;k<7;k++){const xx=x+181+k*43;line(c,xx,274,xx,365,p.trim,2);line(c,xx,274,x+304,232,p.trim);}
+     line(c,x+174,308,x+452,308,p.trim,2);
+    }
     for(let k=0;k<10;k++){
      const xx=x+192+k*25;rect(c,xx,343,17,14,'#6e6b57');leaves(c,xx+8,337,13,'#56836a');
     }
@@ -347,6 +373,17 @@ export function createPlaceScenes(a){
     // The exposed service rail deliberately ends before a long empty span.
     line(c,x+184,381,x+367,381,'#45495f',3);line(c,x+184,388,x+367,388,'#262e43',2);
     for(let k=0;k<6;k++)line(c,x+193+k*31,382,x+208+k*31,388,'#45495f');
+    // Past the empty span, the other two blocks of a tile show a parked pod pad or a lit hab strip.
+    const bi=Math.round(x/768)%3;
+    if(bi===1){
+     rect(c,x+500,392,190,8,'#363b4c');rect(c,x+510,400,170,6,'#141e30');
+     for(let k=0;k<2;k++){const px=x+530+k*80;rect(c,px,370,52,22,'#39475d');rect(c,px+8,374,20,6,p.accent+'77');rect(c,px+44,378,8,8,'#262e43');}
+     sign(c,x+640,330,50,13,p,rand(p.seed+x),false,'PAD 3');
+    }else if(bi===2){
+     rect(c,x+520,250,12,150,'#323647');rect(c,x+560,286,170,40,'#1c283c');rect(c,x+560,286,170,3,'#45495f');
+     for(let k=0;k<7;k++)rect(c,x+570+k*22,298,12,14,k%3===1?'#0c172a':p.light+'55');
+     rect(c,x+524,244,4,6,'#41475a');
+    }
    }else{
     // A huge nearby structural rib passes close to the train in deep shadow.
     poly(c,[[x+14,-20],[x+45,-20],[x+115,135],[x+88,308],[x+27,470],[x-2,470],[x+61,302],[x+88,140]],'#0a1223');

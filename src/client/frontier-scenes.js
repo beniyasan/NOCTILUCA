@@ -72,6 +72,35 @@ function undersea(){
  const coral=(c,x,base,h,r,cols)=>{for(let k=0;k<5;k++){const col=cols[k%cols.length],a=-Math.PI/2+(k-2)*.35+(r()-.5)*.3;let px=x,py=base;for(let s=0;s<4;s++){const nx=px+Math.cos(a+(r()-.5)*.6)*h/4,ny=py+Math.sin(a)*h/4;line(c,px,py,nx,ny,col,Math.max(1,4-s));px=nx;py=ny;}ellipse(c,px,py,2,2,col);}};
  const anemone=(c,x,y,p,col)=>{ellipse(c,x,y,6,3,'#402a3c');for(let k=0;k<7;k++)line(c,x-6+k*2,y-1,x-8+k*2.6,y-9,col,1);};
  const dwelling=(c,x,base,w,h,p,r)=>{tower(c,x,base,w,h,{...p,neon:p.accent},r);for(let yy=base-h+14;yy<base-8;yy+=22)porthole(c,x+w/2,yy,3,p,r()>.3);};
+
+ // Districts 1-3: the second and third blocks of a tile get their own composition.
+ const trenchWalls=(c,x,p)=>{poly(c,[[x,120],[x+60,110],[x+150,170],[x+210,300],[x+230,400],[x+260,HEIGHT],[x,HEIGHT]],p.near);poly(c,[[x+480,392],[x+500,280],[x+560,190],[x+660,130],[x+CELL,120],[x+CELL,HEIGHT],[x+450,HEIGHT]],p.near);gradient(c,x+232,300,238,150,['#03101d00','#03101d','#000308']);};
+ function altLayer(c,x,d,bi,p,r){
+  if(d===1){ // 珊瑚の居住塔
+   if(bi===1){dwelling(c,x+300,410,90,330,p,r);for(let k=0;k<4;k++){const yy=170+k*60,w=170-k*20;rect(c,x+345-w/2,yy,w,6,p.trim);coral(c,x+345-w/2+8,yy,30+k*6,r,['#ff7aa8','#c784ff']);coral(c,x+345+w/2-8,yy,26+k*6,r,['#ffd07a','#ff9a5a']);}
+    for(let k=0;k<5;k++)anemone(c,x+50+k*40,406,p,k%2?'#7cf5e0':'#ff9ad0');dome(c,x+520,410,150,80,p,r,'CORAL 3');coral(c,x+700,410,70,r,['#ff7aa8','#ff9a5a']);tube(c,x+390,x+520,360,p,12);}
+   else{poly(c,[[x,410],[x+120,330],[x+300,300],[x+480,320],[x+640,360],[x+CELL,410]],'#3a2440');for(let k=0;k<5;k++){const xx=x+60+k*140,yy=[380,330,312,326,366][k];dome(c,xx,yy,110,50+k%2*16,p,r,' ');coral(c,xx+110,yy,40,r,['#ff7aa8','#c784ff','#ffd07a']);}
+    for(let k=0;k<4;k++)tube(c,x+170+k*140,x+200+k*140,[340,318,322,350][k],p,10);sign(c,x+340,210,16,48,p,r,true,'珊瑚');}
+  }else if(d===2){ // 海溝の研究所
+   trenchWalls(c,x,p);
+   if(bi===1){tube(c,x+200,x+510,236,p,14);line(c,x+355,250,x+355,280,p.trim,2);rect(c,x+300,280,110,52,p.mid);rect(c,x+300,280,110,4,p.trim);for(let j=0;j<3;j++)porthole(c,x+325+j*30,305,6,p,true);
+    for(let k=0;k<3;k++)porthole(c,x+80+k*26,200+k*30,5,p,k!==1);for(let k=0;k<3;k++)porthole(c,x+620-k*20,190+k*40,5,p,true);sign(c,x+300,210,110,15,p,r,false,'DEEP LINK');line(c,x+355,332,x+355,HEIGHT,p.trim,1);}
+   else{ellipse(c,x+110,240,46,40,p.trim);ellipse(c,x+110,240,40,34,'#0e2e3e');ellipse(c,x+110,240,40,34,p.light+'33');rect(c,x+80,226,20,4,'#ffffff44');sign(c,x+60,300,100,15,p,r,false,'ABYSS OBS');
+    line(c,x+500,280,x+492,440,p.trim,3);line(c,x+512,282,x+504,440,p.trim,1);for(let k=0;k<3;k++){rect(c,x+560+k*40,150+k*50,70,28,p.mid);rect(c,x+560+k*40,150+k*50,70,3,p.trim);porthole(c,x+595+k*40,164+k*50,4,p,true);}}
+  }else{ // 昆布の水耕畑
+   if(bi===1){for(let k=0;k<3;k++){const fx=x+50+k*240;rect(c,fx,200,5,204,p.trim);rect(c,fx+170,200,5,204,p.trim);for(let j=0;j<5;j++)line(c,fx,210+j*44,fx+175,210+j*44,p.trim+'88');rect(c,fx-4,196,183,6,p.trim);}sign(c,x+300,160,90,16,p,r,false,'HARVEST');}
+   else{industry(c,x+40,404,150,170,p,r);for(let k=0;k<3;k++){rect(c,x+230+k*70,330,50,74,p.mid);ellipse(c,x+255+k*70,330,25,8,p.trim);rect(c,x+236+k*70,350,38,30,'#2f6a3e88');}dome(c,x+470,404,160,90,p,r,'DRYING');tube(c,x+440,x+470,380,p,10);for(let k=0;k<4;k++)crate(c,x+660,390-k*16,40,16,p);}
+  }
+ }
+ function altLife(c,x,d,bi,t,p,quiet){
+  if(d===1){if(bi===1){for(let k=0;k<5;k++){c.globalAlpha=.35+.25*Math.sin(t*1.5+k);ellipse(c,x+50+k*40,402,8,3,k%2?'#7cf5e0':'#ff9ad0');}c.globalAlpha=1;const q=shuttling(t,40);diver(c,x+420+q.f*120,260-q.f*60,t,p,q.dir);}
+   else{const q=shuttling(t,50);submarine(c,x+80+q.f*600,240,t,p,.45,q.dir);}
+   school(c,x+(bi===1?560:200),220+Math.sin(t*.2)*20,t,quiet?5:11,'#ffb07a',50,Math.sin(t*.1)>0?1:-1);}
+  else if(d===2){if(bi===1){const q=shuttling(t,40);submarine(c,x+260+q.f*220,380,t,p,.5,q.dir);if(Math.sin(t*2)>0)glow(c,x+353,276,4,4,p.accent,10);}
+   else{const q=shuttling(t,36);rect(c,x+494-q.f*8,290+q.f*140,16,14,'#e0a84a');rect(c,x+497-q.f*8,294+q.f*140,10,4,p.light);const a=t*.3;glow(c,x+340+Math.sin(a)*60,380+Math.cos(a*1.3)*20,6,6,'#9fffe8',12);}}
+  else{if(bi===1){for(let k=0;k<3;k++)for(let j=0;j<4;j++)kelp(c,x+80+k*240+j*36,400,150+((k+j)%3)*30,t,p,k+j);const q=shuttling(t,44);diver(c,x+100+q.f*540,300,t,p,q.dir,true);}
+   else{const q=mod(t*.04,1),sx=x+CELL-q*CELL;submarine(c,sx,300,t,p,.55,-1);line(c,sx+30,302,sx+60,312,p.trim);crate(c,sx+56,306,20,14,p);robot(c,x+560+shuttling(t,30).f*80,404,t,p,.8);}}
+ }
  // Extra districts (4-7) and the second and third station blocks of a tile, so a wide window
  // does not repeat the same airlock. `bi` is the block of the tile (0-2).
  function extraLayer(c,x,d,bi,p,r){
@@ -131,7 +160,7 @@ function undersea(){
   if(depth===1){
    if(d!==2)seabed(c,410,p,r);
    for(let x=-CELL;x<=TILE;x+=CELL){
-    const bi=((Math.round(x/CELL)%3)+3)%3;if(d>=4||(d===0&&bi)){extraLayer(c,x,d,bi,p,r);continue;}
+    const bi=((Math.round(x/CELL)%3)+3)%3;if(bi&&d>=1&&d<=3){altLayer(c,x,d,bi,p,r);continue;}if(d>=4||(d===0&&bi)){extraLayer(c,x,d,bi,p,r);continue;}
     if(d===0){
      // A lift tube climbs out of sight towards the surface habitats.
      rect(c,x+118,0,26,300,p.trim);rect(c,x+122,0,18,300,'#123648');for(let yy=10;yy<300;yy+=24)rect(c,x+118,yy,26,3,p.near);
@@ -177,7 +206,7 @@ function undersea(){
  function life(c,s,t0,travel,width,quiet){
   const p=s.p,d=p.district||0;
   cells(travel,width,(x,cell)=>{const t=t0+cell*11;
-   if(d>=4||(d===0&&cell)){extraLife(c,x,d,cell,t,p,quiet);return;}
+   if(cell&&d>=1&&d<=3){altLife(c,x,d,cell,t,p,quiet);return;}if(d>=4||(d===0&&cell)){extraLife(c,x,d,cell,t,p,quiet);return;}
    if(d===0){
     const lift=shuttling(t,48);rect(c,x+123,30+lift.f*250,16,20,'#e0a84a');rect(c,x+126,34+lift.f*250,10,5,p.light);
     const u=mod(t*.06,1);rect(c,x+178+u*244-10,355,20,10,'#e0a84a');rect(c,x+178+u*244-6,357,12,3,p.light);
@@ -216,6 +245,38 @@ function volcano(){
  const basalt=(c,x,base,w,h,p,r)=>{for(let k=0;k<w;k+=9){const hh=h-ir(r,0,h*.4);rect(c,x+k,base-hh,8,hh,k%18?p.mid:p.near);rect(c,x+k,base-hh,8,2,p.trim);}};
  const onsen=(c,x,y,w)=>{ellipse(c,x,y,w,w*.22,'#4a3a36');ellipse(c,x,y-1,w-4,w*.18,'#7fb8b4');ellipse(c,x,y-2,w-8,w*.13,'#a8d8d0');rect(c,x-w*.3,y-3,w*.25,1,'#e8fbf6');};
  const lanternRow=(c,x1,x2,y,sag)=>{let px=x1,py=y;for(let i=1;i<=10;i++){const t=i/10,xx=x1+(x2-x1)*t,yy=y+sag*4*t*(1-t);line(c,px,py,xx,yy,'#6e4a3c');if(i<10){ellipse(c,xx,yy+8,5,6,i%2?'#e2453c':'#ffb347');glow(c,xx-3,yy+5,6,6,'#ff8a4a',6);}px=xx;py=yy;}};
+
+ // Districts 1-3: the second and third blocks of a tile get their own composition (see undersea).
+ function altLayer(c,x,d,bi,p,r){
+  if(d===1){ // 鋳造街
+   rect(c,x,286,CELL,6,p.trim);
+   if(bi===1){for(let k=0;k<4;k++){const sx=x+20+k*190,h=90+(k%2)*20;rect(c,sx,408-h,150,h,p.mid);poly(c,[[sx-8,408-h],[sx+158,408-h],[sx+140,408-h-24],[sx+10,408-h-24]],p.near);rect(c,sx+40,340,70,68,'#2a1210');glow(c,sx+44,350,62,50,'#ff8a3a',12);rect(c,sx+120,408-h-70,14,50,p.near);rect(c,sx+117,408-h-74,20,5,p.trim);}
+    sign(c,x+170,220,16,52,p,r,true,'鍛冶');sign(c,x+500,236,80,14,p,r,false,'ANVIL ROW');}
+   else{for(const px of [60,420])rect(c,x+px,150,12,258,p.trim);rect(c,x+60,150,372,10,p.trim);line(c,x+246,160,x+246,210,p.trim,2);ellipse(c,x+246,226,34,20,'#3a2a26');ellipse(c,x+246,214,28,6,'#ffb347');
+    for(let k=0;k<5;k++){rect(c,x+90+k*66,378,50,20,'#2a1210');rect(c,x+94+k*66,380,42,8,k%2?'#ff6a1a':'#6a2a1a');}rect(c,x+540,120,70,288,p.near);rect(c,x+536,116,78,8,p.trim);for(let yy=140;yy<390;yy+=30)rect(c,x+556,yy,20,10,'#ff8a3a88');sign(c,x+120,250,80,14,p,r,false,'CAST 3');}
+  }else if(d===2){ // 地熱発電の塔群
+   if(bi===1){for(let k=0;k<3;k++){const wx=x+60+k*170;poly(c,[[wx,408],[wx+30,300],[wx+60,408]],p.near);line(c,wx+30,300,wx+30,408,p.trim);rect(c,wx+22,296,16,8,p.trim);}
+    coolingTower(c,x+560,408,150,220,p);rect(c,x+300,330,120,78,p.mid);rect(c,x+300,330,120,4,p.trim);for(let j=0;j<4;j++)rect(c,x+310+j*28,346,18,12,p.light+'88');sign(c,x+320,300,80,14,p,r,false,'GEO 2');}
+   else{rect(c,x+40,300,440,108,p.mid);rect(c,x+40,300,440,5,p.trim);for(let j=0;j<10;j++)rect(c,x+56+j*42,320,26,40,'#ffb34744');for(const cx of [110,380]){rect(c,x+cx,200,26,100,p.near);rect(c,x+cx-3,196,32,6,p.trim);}
+    for(let k=0;k<2;k++){const tx=x+560+k*120;line(c,tx,408,tx+20,220,p.trim,2);line(c,tx+40,408,tx+20,220,p.trim,2);line(c,tx,240,tx+40,240,p.trim,2);line(c,tx+4,300,tx+36,300,p.trim);}line(c,x+580,240,x+700,240,p.trim+'88');sign(c,x+200,270,90,16,p,r,false,'POWER');}
+   line(c,x,370,x+CELL,370,p.trim,6);line(c,x,378,x+CELL,378,p.near,3);
+  }else{ // 火口縁の湯の町
+   for(let k=0;k<3;k++){const yy=330+k*26;rect(c,x,yy,CELL,26,k%2?p.mid:p.near);rect(c,x,yy,CELL,2,p.trim);}
+   if(bi===1){pagoda(c,x+220,330,320,190,{...p,neon:'#ffb347'},r);onsen(c,x+380,370,150);for(let k=0;k<3;k++){rect(c,x+320+k*44,250,36,26,k===1?'#c84a3a':'#3a4a6a');}sign(c,x+360,220,16,40,p,r,true,'湯');onsen(c,x+100,390,50);onsen(c,x+650,390,50);}
+   else{for(let k=0;k<3;k++)pagoda(c,x+20+k*190,330-(k%2)*10,120+(k%2)*30,90+k*16,{...p,neon:'#ffb347'},r);for(let k=0;k<3;k++)onsen(c,x+140+k*220,392,60);rect(c,x+630,250,6,80,'#c84a3a');rect(c,x+700,250,6,80,'#c84a3a');rect(c,x+620,246,96,8,'#c84a3a');rect(c,x+626,258,84,4,'#c84a3a');}
+   for(let k=0;k<10;k++)line(c,x+k*77,300,x+k*77+77,300,p.trim);
+  }
+ }
+ function altLife(c,x,d,bi,t,p,quiet){
+  if(d===1){if(bi===1){for(let k=0;k<4;k++){const sx=x+20+k*190,u=mod(t*1.4+k*.3,1);if(u<.3&&!quiet)for(let j=0;j<5;j++)rect(c,sx+75+Math.cos(j)*u*40,380-Math.sin(j+1)*u*30,2,1,'#ffd08a');person(c,sx+70,408,t+k,p,{action:'work',hat:k%2===0,coat:'#6a4a3a'});}}
+   else{const u=mod(t,20),tilt=u>8&&u<13;if(tilt)for(let j=0;j<8;j++)rect(c,x+270,228+j*18,3,18,j%2?'#ffcf5a':'#ff8a3a');for(let k=0;k<5;k++)steam(c,x+114+k*66,372,t+k,{...p,light:'#c9a6a0'},2);const q=shuttling(t,40);person(c,x+100+q.f*300,408,t,p,{walk:true,dir:q.dir,hat:true,coat:'#7a5a44'});}}
+  else if(d===2){if(bi===1){for(let k=0;k<3;k++){for(let j=0;j<(quiet?2:5);j++){const f=mod(t*.2+j/5+k*.3,1);c.globalAlpha=.35*(1-f);ellipse(c,x+90+k*170+Math.sin(t+j)*5,292-f*100,6+f*18,4+f*8,'#d9c8c0');}c.globalAlpha=1;}for(let j=0;j<(quiet?3:6);j++){const f=mod(t*.12+j/6,1);c.globalAlpha=.35*(1-f);ellipse(c,x+635+Math.sin(t*.3+j)*8*f,188-f*120,14+f*40,8+f*16,'#d9c8c0');}c.globalAlpha=1;}
+   else{for(const cx of [123,393])steam(c,x+cx,196,t,{...p,light:'#c9a6a0'},4);for(let k=0;k<2;k++)if(Math.sin(t*2+k)>0)glow(c,x+578+k*120,216,4,4,'#ff4b2b',8);robot(c,x+60+shuttling(t,44).f*400,408,t,p,.9);}}
+  else{const pools=bi===1?[[380,370,150],[100,390,50],[650,390,50]]:[[140,392,60],[360,392,60],[580,392,60]];
+   for(const [cx,cy,w] of pools){for(let j=0;j<(quiet?2:4);j++){const f=mod(t*.2+j/4+cx*.001,1);c.globalAlpha=.3*(1-f);ellipse(c,x+cx+Math.sin(t+j)*6,cy-8-f*40,8+f*w*.1,3+f*4,'#f2e0d8');}c.globalAlpha=1;ellipse(c,x+cx-12,cy-3,4,4,'#e2b896');rect(c,x+cx-16,cy-9,8,3,'#2c211b');}
+   for(let k=0;k<10;k++){const lx=x+20+k*77,sw=Math.sin(t*1.3+k)*2;line(c,lx,300,lx+sw,307,p.trim);ellipse(c,lx+sw,311,4,5,'#ff7a3a');rect(c,lx+sw-1,309,2,3,'#ffd08a');}
+   const q=shuttling(t,44);person(c,x+60+q.f*600,330,t,p,{walk:true,dir:q.dir,coat:bi===1?'#d8c8b0':'#8a5a5a'});}
+ }
  // Extra districts (4-7) and the second and third station blocks (see undersea).
  function extraLayer(c,x,d,bi,p,r){
   if(d===0){
@@ -274,7 +335,7 @@ function volcano(){
   if(depth===1){
    rect(c,0,408,TILE,HEIGHT-408,p.near);line(c,0,408,TILE,408,p.trim,2);
    for(let x=-CELL;x<=TILE;x+=CELL){
-    const bi=((Math.round(x/CELL)%3)+3)%3;if(d>=4||(d===0&&bi)){extraLayer(c,x,d,bi,p,r);continue;}
+    const bi=((Math.round(x/CELL)%3)+3)%3;if(bi&&d>=1&&d<=3){altLayer(c,x,d,bi,p,r);continue;}if(d>=4||(d===0&&bi)){extraLayer(c,x,d,bi,p,r);continue;}
     if(d===0){
      for(let k=0;k<3;k++)industry(c,x+20+k*170,408,110,150+k%2*60,{...p,neon:p.neon},r);
      lava(c,x,420,CELL,16);rect(c,x+560,410,160,8,p.trim);rect(c,x+568,418,8,20,p.near);rect(c,x+704,418,8,20,p.near);line(c,x+560,410,x+720,410,p.light+'88');
@@ -313,7 +374,7 @@ function volcano(){
  function life(c,s,t0,travel,width,quiet){
   const p=s.p,d=p.district||0;
   cells(travel,width,(x,cell)=>{const t=t0+cell*11;
-   if(d>=4||(d===0&&cell)){extraLife(c,x,d,cell,t,p,quiet);return;}
+   if(cell&&d>=1&&d<=3){altLife(c,x,d,cell,t,p,quiet);return;}if(d>=4||(d===0&&cell)){extraLife(c,x,d,cell,t,p,quiet);return;}
    if(d===0){
     for(let k=0;k<(quiet?8:20);k++){const f=mod(t*.05+k/20,1);rect(c,x+f*CELL,424+(k%3)*3,3+k%4,1,k%2?'#fff0a0':'#ffcf5a');}
     const q=shuttling(t,34);crate(c,x+566+q.f*130,396,16,14,p);person(c,x+560+q.f*130,408,t,p,{walk:true,dir:q.dir,hat:true,coat:'#8a5a3a'});
@@ -356,6 +417,33 @@ function skyCity(){
  const turbine=(c,x,base,h,t,p)=>{line(c,x,base,x,base-h,p.trim,4);rect(c,x-5,base-h-4,12,8,p.light);for(let k=0;k<3;k++){const a=t*1.2+k*Math.PI*2/3;line(c,x,base-h,x+Math.cos(a)*h*.45,base-h+Math.sin(a)*h*.45,'#e9e4d6',3);}};
  const shrub=(c,x,y,col)=>{ellipse(c,x,y-8,12,10,col);ellipse(c,x-8,y-4,8,6,col);ellipse(c,x+8,y-4,8,6,col);rect(c,x-1,y-2,2,6,'#4a3e52');};
  const bellTower=(c,x,base,h,p)=>{rect(c,x,base-h,30,h,p.mid);rect(c,x-4,base-h,38,5,p.trim);poly(c,[[x-6,base-h],[x+15,base-h-24],[x+36,base-h]],p.near);rect(c,x+8,base-h+10,14,16,'#1a2040');};
+
+ const windmill=(c,x,base,h,p)=>{poly(c,[[x-16,base],[x-9,base-h],[x+9,base-h],[x+16,base]],p.mid);poly(c,[[x-12,base-h],[x,base-h-14],[x+12,base-h]],p.near);rect(c,x-5,base-24,10,24,p.light+'66');};
+ // Districts 1-3: the second and third blocks of a tile get their own composition (see undersea).
+ function altLayer(c,x,d,bi,p,r){
+  if(d===1){ // 浮遊島の市場
+   if(bi===1){island(c,x+80,330,480,p,r,100);poly(c,[[x+240,330],[x+320,230],[x+400,330]],'#c85a5a');rect(c,x+300,290,40,40,p.light+'66');for(let k=0;k<5;k++){if(k===2)continue;const sx=x+110+k*85;rect(c,sx,304,56,26,p.mid);poly(c,[[sx-4,304],[sx+28,290],[sx+60,304]],k%2?'#e0b060':'#9fe3ff');}
+    island(c,x+620,300,110,p,r,40);line(c,x+560,300,x+620,290,p.trim);sign(c,x+280,200,80,16,p,r,false,'BAZAAR');}
+   else{for(let k=0;k<3;k++){const bx=x+100+k*240,ry=290+(k%2)*40;line(c,bx-40,ry,bx,ry-110,p.trim);line(c,bx+60,ry,bx+20,ry-110,p.trim);ellipse(c,bx+10,ry-130,34,30,['#ffb0d0','#9fe3ff','#fff1c9'][k]);rect(c,bx-50,ry,120,8,'#8a6a4a');rect(c,bx-40,ry-24,100,24,p.mid);rect(c,bx-34,ry-18,88,10,p.light+'88');}
+    line(c,x+170,300,x+290,330,p.trim);line(c,x+410,330,x+530,300,p.trim);}
+  }else if(d===2){ // 風車の発電群
+   if(bi===1){island(c,x+30,350,700,p,r,80);for(let k=0;k<4;k++)windmill(c,x+110+k*170,350,110+(k%2)*30,p);rect(c,x+380,330,50,20,p.mid);}
+   else{island(c,x+200,340,340,p,r,90);line(c,x+370,340,x+370,120,p.trim,5);for(let k=0;k<3;k++)line(c,x+370,340,x+250+k*120,440,p.trim+'88');for(let k=0;k<3;k++){rect(c,x+230+k*80,310,60,30,p.mid);rect(c,x+238+k*80,318,44,8,'#9fffb8aa');}sign(c,x+420,290,80,16,p,r,false,'WIND 4');island(c,x+620,300,100,p,r,40);}
+  }else{ // 飛行船の港
+   if(bi===1){island(c,x+60,350,560,p,r,90);dome(c,x+120,350,400,160,p,r,'HANGAR');rect(c,x+220,270,200,80,'#0a1030');line(c,x+560,350,x+560,180,p.trim,4);line(c,x+560,184,x+660,184,p.trim,3);line(c,x+650,184,x+650,260,p.trim);}
+   else{island(c,x+300,350,300,p,r,80);rect(c,x+440,140,14,210,p.trim);for(let yy=150;yy<340;yy+=20)line(c,x+440,yy,x+454,yy+10,p.near);rect(c,x+430,134,34,8,p.trim);rect(c,x+320,300,110,50,p.mid);for(let j=0;j<4;j++)rect(c,x+330+j*26,314,16,12,p.light+'88');line(c,x+300,330,x+220,330,p.trim,3);sign(c,x+330,280,90,15,p,r,false,'GATE 2');island(c,x+40,330,160,p,r,50);}
+  }
+ }
+ function altLife(c,x,d,bi,t,p,quiet){
+  if(d===1){if(bi===1){for(let k=0;k<(quiet?2:4);k++)person(c,x+130+k*110+Math.sin(t*.3+k)*14,330,t+k,p,{walk:k%2===1,coat:['#b58a6a','#6a7ab0','#8a6a9a','#6a9a8a'][k]});}
+   else{for(let k=0;k<3;k++)person(c,x+100+k*240,290+(k%2)*40,t+k,p,{action:'work',coat:'#b58a6a'});}
+   if(!quiet)for(let k=0;k<2;k++){const f=mod(t*.05+k/2,1);balloon(c,x+300+k*260+Math.sin(t+k)*6,300-f*260,['#ff7aa8','#ffd07a'][k]);}}
+  else if(d===2){if(bi===1){for(let k=0;k<4;k++){const mx=x+110+k*170,my=350-(110+(k%2)*30)+4;for(let j=0;j<4;j++){const a=t*.9+k+j*Math.PI/2;line(c,mx,my,mx+Math.cos(a)*40,my+Math.sin(a)*40,'#e9e4d6',3);}}}
+   else{const a=t*.7;for(let k=0;k<3;k++){const b=a+k*Math.PI*2/3;line(c,x+370,120,x+370+Math.cos(b)*80,120+Math.sin(b)*80,'#e9e4d6',4);}}
+   for(let k=0;k<(quiet?1:3);k++)bird(c,x+mod(t*22+k*240,CELL),140+k*30,t+k);}
+  else{if(bi===1){robot(c,x+220+shuttling(t,40).f*200,350,t,p,.8);const q=shuttling(t,30);rect(c,x+650-2,190+q.f*60,4,8,p.trim);crate(c,x+640,198+q.f*60,20,14,p);}
+   else{const by=150+Math.sin(t*.5)*3;line(c,x+460,140,x+495,by,p.trim);blimp(c,x+530,by,t,p,.8,-1,'ARCA-5');const q=shuttling(t,36);person(c,x+230+q.f*180,330,t,p,{walk:true,dir:q.dir,carry:true,coat:'#7a86b8'});}}
+ }
  // Extra districts (4-7) and the second and third station blocks (see undersea).
  function extraLayer(c,x,d,bi,p,r){
   if(d===0){
@@ -403,7 +491,7 @@ function skyCity(){
   }
   if(depth===1){
    for(let x=-CELL;x<=TILE;x+=CELL){
-    const bi=((Math.round(x/CELL)%3)+3)%3;if(d>=4||(d===0&&bi)){extraLayer(c,x,d,bi,p,r);continue;}
+    const bi=((Math.round(x/CELL)%3)+3)%3;if(bi&&d>=1&&d<=3){altLayer(c,x,d,bi,p,r);continue;}if(d>=4||(d===0&&bi)){extraLayer(c,x,d,bi,p,r);continue;}
     if(d===0){
      island(c,x+20,330,300,p,r,90);island(c,x+440,300,260,p,r,80);
      for(let k=0;k<3;k++)tower(c,x+40+k*90,330,60,120+k%2*50,p,r);dome(c,x+470,300,120,80,p,r,'ARCA');tower(c,x+610,300,56,160,p,r);
@@ -432,7 +520,7 @@ function skyCity(){
  function life(c,s,t0,travel,width,quiet){
   const p=s.p,d=p.district||0;
   cells(travel,width,(x,cell)=>{const t=t0+cell*11;
-   if(d>=4||(d===0&&cell)){extraLife(c,x,d,cell,t,p,quiet);return;}
+   if(cell&&d>=1&&d<=3){altLife(c,x,d,cell,t,p,quiet);return;}if(d>=4||(d===0&&cell)){extraLife(c,x,d,cell,t,p,quiet);return;}
    if(d===0){
     const u=shuttling(t,26),gx=x+330+u.f*104,gy=316-u.f*24;rect(c,gx-7,gy+3,14,11,'#c85a5a');rect(c,gx-5,gy+5,10,4,p.light);line(c,gx,gy,gx,gy+3,p.trim);
     for(let k=0;k<3;k++)propeller(c,x+80+k*90,418,t+k,p);propeller(c,x+560,380,t,p);
