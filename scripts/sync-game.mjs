@@ -14,7 +14,7 @@ const CLIENT=[
  'anim-utils.js','pixel.js','worlds.js','sprites.js','cityscape.js','station-scene.js','scene.js',
  'engine.js','cabin.js','passengers.js','passenger-kinds.js','scenery.js','place-scenes.js',
  'kowloon-moments.js','scrap-moments.js','pelagic-moments.js','gorge-moments.js','jade-moments.js','relay-moments.js','frontier-scenes.js','frontier-moments.js',
- 'focus-clock.js','arrival-bell.js','timer-ui.js','timer-tasks-ui.js','journal-ui.js','notion-ui.js','music.js','music-ui.js',
+ 'focus-clock.js','arrival-bell.js','timer-ui.js','timer-tasks-ui.js','journal-ui.js','notion-ui.js','text-size.js','music.js','music-ui.js',
  'main.js','gateway.js','portraits.js','talk.js','journey-ui.js','guest.js','story-ui.js','reset-ui.js','operation-id.js',
  'commerce-ui.js','chapter-two-ui.js','chapter-three-ui.js','chapter-four-ui.js','sidequests-ui.js','sidequest-scenes.js',
  'scene.css','journey.css'

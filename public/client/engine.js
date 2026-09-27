@@ -275,6 +275,8 @@ function resize(){
  const panelHeight=Math.ceil($('console').getBoundingClientRect().height);
  if(panelHeight!==consoleHeight){consoleHeight=panelHeight;$('app').style.setProperty('--console-height',panelHeight+'px');}
  const b=$('window').getBoundingClientRect();if(!b.width||!b.height)return;
+ // A short window (small screen, or larger text growing the console) cannot hold the reader panel.
+ $('app').classList.toggle('short-window',b.height<460);
  // Grow the conversation sheet with the window; its px layout is tuned for a ~1380x720 window.
  // Percentages under zoom resolve differently across browsers, so a scaled sheet gets its height cap in px (divided back out of the zoom).
  const sheetScale=Math.min(1.8,Math.max(1,Math.min(b.width/1380,b.height/720))),appStyle=$('app').style;appStyle.setProperty('--sheet-scale',sheetScale.toFixed(2));

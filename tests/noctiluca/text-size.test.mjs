@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+test('every px font size goes through a scalable variable that phones leave untouched',async()=>{
+ const [scene,journey,html]=await Promise.all(['src/client/scene.css','src/client/journey.css','src/client/index.template.html'].map(p=>readFile(p,'utf8')));
+ const css=scene+journey;
+ assert.doesNotMatch(css,/font-size:\d+px|font:\d+px/,'no fixed px font sizes left');
+ const used=new Set([...css.matchAll(/var\(--fs-(\d+)\)/g)].map(m=>m[1]));
+ for(const n of used)assert.match(scene,new RegExp(`--fs-${n}:calc\\(max\\(${n}px,var\\(--text-min\\)\\)\\*var\\(--text-scale\\)\\)`),'--fs-'+n+' is defined');
+ // Defaults leave sizes as authored; only wide screens with a fine pointer raise and scale them.
+ assert.match(scene,/:root\{--text-min:0px;--text-scale:1;/);
+ assert.match(scene,/@media\(min-width:691px\) and \(pointer:fine\)\{:root\{--text-min:12px\}:root\[data-text-size="large"\]\{--text-scale:1\.15\}:root\[data-text-size="xlarge"\]\{--text-scale:1\.3\}\}/);
+ assert.match(html,/<select id="text-size"><option value="normal" selected>標準<\/option><option value="large">大きめ<\/option><option value="xlarge">特大<\/option><\/select>/);
+});

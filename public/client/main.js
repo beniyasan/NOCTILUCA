@@ -2,12 +2,14 @@ import {createSidequestsUI} from './sidequests-ui.js';
 import {createMusicUI} from './music-ui.js';
 import {createTimerUI} from './timer-ui.js';
 import {createJournalUI} from './journal-ui.js';
+import {initTextSize} from './text-size.js';
 import {createNotionUI} from './notion-ui.js';
 import {createStoryUI} from './story-ui.js';
 import {createCommerceUI} from './commerce-ui.js';
 import {Gateway} from './gateway.js';
 import {createEngine} from './engine.js';
 import {createJourneyUI} from './journey-ui.js';
+initTextSize();
 const gateway=new Gateway();
 try{
  const [_,r]=await Promise.all([gateway.init(),fetch('/content/catalog.json')]);if(!r.ok)throw new Error('人物データを読み込めませんでした。');
