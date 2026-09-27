@@ -5,7 +5,7 @@ export function createTimerUI(engine,gateway){
  const $=id=>document.getElementById(id),clock=createFocusClock();
  let showReady=false,busy=false,error='',target=null,epoch=0,originalTitle=document.title;
  let quickGoalDraft=null,durationDraft=null,settingsReturnToQuick=false;
- const tasks=createTimerTasksUI(gateway,()=>clock.view.active);
+ const tasks=createTimerTasksUI(gateway,()=>clock.view.active,task=>engine.journal?.recordTask(task.text));
  const prefs=()=>gateway.snapshot?.state?.settings||{};
  const state=()=>gateway.snapshot?.state||{};
  const setText=(id,value)=>{const n=$(id);if(n)n.textContent=value;};
@@ -68,12 +68,12 @@ export function createTimerUI(engine,gateway){
   const overlayReason=v.active&&blockedReason({includeStation:false})&&!v.waiting?blockedReason({includeStation:false}):(v.waiting&&error?error:'');setText('timer-overlay-message',overlayReason);setHidden('timer-overlay-message',!overlayReason);setHidden('timer-overlay-pause',!v.active);setHidden('timer-overlay-stop',!v.active);setText('timer-overlay-pause',error?'再試行':v.waiting?'到着を確認':v.paused?'再開する':'一時停止');setDisabled('timer-overlay-pause',busy);setDisabled('timer-overlay-stop',busy);
   setText('timer-mini',v.active?label+' '+formatTime(v.seconds)+(v.paused?' ⏸':''):p.focusSeconds?minutes(p.focusSeconds)+' / 休憩'+minutes(p.breakSeconds):'');if(v.active){const progress=$('progress');if(progress)progress.style.width=Math.min(100,Math.max(0,1-v.seconds/v.total)*100+'%');setText('journey-mode',label+(v.paused?' · 一時停止':''));setText('countdown',formatTime(v.seconds));document.title=formatTime(v.seconds)+' '+label+' | NOCTILUCA';}else document.title=originalTitle;
  }
- function stop(){epoch++;showReady=false;clock.stop();target=null;error='';quickGoalDraft=null;engine.setTimerPaused(false);engine.state.stop.held=false;engine.resetTravelClock();message('タイマーを終了しました。');paint();}
+ function stop(){epoch++;showReady=false;clock.stop();engine.journal?.breakEnded();target=null;error='';quickGoalDraft=null;engine.setTimerPaused(false);engine.state.stop.held=false;engine.resetTravelClock();message('タイマーを終了しました。');paint();}
  async function boundary(){
   if(busy||!clock.view.waiting)return;
   const reason=blockedReason({includeStation:false});if(reason){error=reason;message(error);paint();return;}
   busy=true;error='';paint();const generation=epoch,phase=clock.view.phase;
-  try{if(phase==='work'){target??=(engine.state.index+1)%engine.worlds.length;await engine.timerArrive(target);if(generation!==epoch)return;clock.completeWork();const p=prefs(),long=clock.view.completed%p.longBreakEvery===0;clock.start(long?'long':'break',long?p.longBreakSeconds:p.breakSeconds);target=null;message(engine.worlds[engine.state.index].station+'に到着しました。ひと休みしましょう。');}else{await engine.timerDepart();if(generation!==epoch)return;clock.start('work',prefs().focusSeconds);message('発車しました。次の駅まで、作業の時間です。');}}
+  try{if(phase==='work'){target??=(engine.state.index+1)%engine.worlds.length;await engine.timerArrive(target);if(generation!==epoch)return;const worked=clock.view.total;clock.completeWork();void engine.journal?.sessionEnded(worked,prefs().focusGoal);const p=prefs(),long=clock.view.completed%p.longBreakEvery===0;clock.start(long?'long':'break',long?p.longBreakSeconds:p.breakSeconds);target=null;message(engine.worlds[engine.state.index].station+'に到着しました。ひと休みしましょう。');}else{await engine.timerDepart();if(generation!==epoch)return;engine.journal?.breakEnded();clock.start('work',prefs().focusSeconds);message('発車しました。次の駅まで、作業の時間です。');}}
   catch(e){error=e.message;engine.setTimerPaused(true);message(error+' 「旅の記録」で保存を確認してから再試行できます。');}finally{busy=false;paint();}
  }
  async function toggle(){

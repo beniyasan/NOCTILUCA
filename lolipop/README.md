@@ -6,6 +6,7 @@
 
 - `dist-lolipop/`: ロリポップへアップロードする静的ファイル
 - `supabase/migrations/0001_lolipop_initial.sql`: 専用PostgreSQLスキーマ
+- `supabase/migrations/0004_work_journals.sql`: 作業日誌
 - `supabase/functions/api/`: JWT検証、ゲームルール、保存API
 - `scripts/sync-lolipop.mjs`: ゲームルールとコンテンツをEdge Functionへ同期
 - `scripts/build-lolipop.mjs`: 静的配信用ビルドを作成
@@ -47,6 +48,22 @@ supabase secrets set PASSENGER_TALK_MODEL="gpt-6-luna" PASSENGER_TALK_MAX_BATCHE
 ```
 
 `OPENAI_API_KEY`はEdge FunctionのSecretsだけに置く。未設定なら生成は行わず、常にテンプレートの会話になる。1日の費用は、見出し取得1回と生成最大3回分(GPT-6 Lunaで数円程度)が上限。
+
+## 作業日誌
+
+ログインしたプレイヤーだけが使える、ロリポップ版のみの機能。Site版とゲストには「ログインすると使えます」という案内だけを表示する。
+
+- 1プレイヤー1日(日本時間)1行を `work_journals` に保存する。旅のセーブ(64KB上限)とは別の表なので、旅の記録を初期化しても日誌は残る。
+- 集中タイマーの作業が終わると、作業時間と目標を「作業」として自動で記録する。休憩中は車窓のタイマーに「この区間でできたこと」の入力欄を出し、その記録にひとことを付けられる。
+- タスクを完了すると、その内容を「完了したタスク」として記録する。
+- 「作業日誌」画面では日ごとの記録とメモ(4000文字まで)を見る・書く・削除でき、「これまで」から過去の日を開ける。すべての日をMarkdownで書き出せる。
+- 記録は1日80件まで。追記とひとことの更新は `append_work_journal_entry` / `set_work_journal_note` RPCが1文で行う(複数タブから同時に書いても消えない)。
+- 日誌の書き込みはベストエフォート。失敗してもタイマーや旅の保存は止めない。
+
+```sh
+supabase db push   # 0004_work_journals.sql を適用
+supabase functions deploy api --no-verify-jwt
+```
 
 ## 静的ビルド
 
