@@ -10,7 +10,7 @@ export function createTimerUI(engine,gateway){
  const COLLAPSE_KEY='noctiluca.timerOverlay.collapsed';let collapsed=true;
  try{const saved=localStorage.getItem(COLLAPSE_KEY);if(saved!==null)collapsed=saved==='1';}catch{/* default: folded */}
  function setCollapsed(value){collapsed=value;try{localStorage.setItem(COLLAPSE_KEY,value?'1':'0');}catch{/* per-visit only */}paint();}
- const tasks=createTimerTasksUI(gateway,()=>clock.view.active,task=>engine.journal?.recordTask(task.text));
+ const tasks=createTimerTasksUI(gateway,()=>clock.view.active,task=>{engine.journal?.recordTask(task.text);void engine.notion?.completed(task).then(ok=>{if(!ok)message('Notionで完了にできませんでした。次に「集中する」を開いたときに送り直します。');});},()=>engine.notion);
  const prefs=()=>gateway.snapshot?.state?.settings||{};
  const state=()=>gateway.snapshot?.state||{};
  const setText=(id,value)=>{const n=$(id);if(n)n.textContent=value;};

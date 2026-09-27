@@ -36,6 +36,12 @@ export class Gateway extends EventTarget {
  journalExport(){return this.request('/journal/export');}
  // The model may take a while; allow up to a minute before giving up.
  journalOrganize(day,level){return this.request('/journal',{timeout:60000,method:'POST',headers:{'Content-Type':'application/json','X-Noctiluca-Client':'1'},body:JSON.stringify({action:'organize',day,level})});}
+ // Notion connection (signed-in only). The server holds the tokens; the page only sees names.
+ notionStatus(){return this.request('/notion/status');}
+ notionSources(){return this.request('/notion/sources');}
+ notionTasks(){return this.request('/notion/tasks');}
+ notionSource(id){return this.request('/notion/source?id='+encodeURIComponent(id));}
+ notionPost(action,payload={}){return this.request('/notion/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-Noctiluca-Client':'1'},body:JSON.stringify(payload)});}
  // Passenger talk from the day's headlines; null means "use the templates".
  passengerTalk(ask){try{return this.talkPool.take(ask);}catch{return null;}}
 }
