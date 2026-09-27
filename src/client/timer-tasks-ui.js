@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-export function createTimerTasksUI(g,active,onComplete){
+export function createTimerTasksUI(g,active,onComplete,notion=()=>null){
  const list=$('timer-task-list'),input=$('timer-task-input'),composer=$('timer-task-composer'),toggle=$('timer-task-toggle');let busy=false,last='',lastQuick='',editingPlayer=g.snapshot.playerId,messageExpiresAt=0;
  // The focus dialog can add tasks before the timer starts; completing them stays with the running timer.
  const quickList=$('timer-quick-task-list'),quickInput=$('timer-quick-task-input'),quickAdd=$('timer-quick-task-add');
@@ -33,12 +33,18 @@ export function createTimerTasksUI(g,active,onComplete){
  async function addBeforeStart(){
   const text=quickInput.value.trim();if(!text||busy||g.busy||g.blocked)return;
   quickMessage('保存中…');
-  if(await send('add',{text},{anytime:true,say:quickMessage})){if(quickInput.value.trim()===text)quickInput.value='';quickMessage('');render();}
+  if(await send('add',{text},{anytime:true,say:quickMessage})){if(quickInput.value.trim()===text)quickInput.value='';if($('timer-quick-task-message')?.textContent==='保存中…')quickMessage('');render();}
  }
  async function send(action,payload,{anytime=false,say=message}={}){
   if(busy||g.busy||g.blocked||(!anytime&&!active()))return false;
   busy=true;if(say===message)message('保存中…');render();
-  try{await g.send('focus.task.'+action,payload);return true;}
+  // While connected to Notion, a new task is saved here first, then created there.
+  const link=action==='add'&&notion()?.sending;if(link)payload={...payload,notion:'pending'};
+  try{
+   await g.send('focus.task.'+action,payload);
+   if(link){const task=[...(g.snapshot.state.focusTasks||[])].reverse().find(t=>t.notion==='pending'&&t.text===payload.text.trim());if(task&&!await notion().added(task))say('Notionに送れませんでした。次に「集中する」を開いたときに送り直します。');}
+   return true;
+  }
   catch(e){say(e.message+(g.blocked?' 「旅の記録」で保存を確認してください。':''));return false;}
   finally{busy=false;render();}
  }

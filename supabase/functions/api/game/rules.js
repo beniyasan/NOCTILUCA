@@ -29,6 +29,9 @@ export class GameError extends Error {
 }
 export function fail(code,message,status=400){throw new GameError(code,message,status);}
 export function object(v){return !!v && typeof v==='object' && !Array.isArray(v);}
+// A focus task linked to Notion keeps its page ID; 'pending' means it still has to be sent there.
+const notionPageId=v=>typeof v==='string'&&/^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(v);
+const notionTaskRef=v=>v==='pending'||notionPageId(v);
 export function exactKeys(v,allowed){
   if(!object(v)||Object.keys(v).some(k=>!allowed.includes(k)))fail('BAD_INPUT','送信内容を確認してください。');
 }
@@ -58,7 +61,7 @@ export function checkState(s){
   for(const k of ['notes','heard'])if(!Array.isArray(s[k]))fail('SAVE_INVALID','保存データに不足があります。',409);
   for(const [key,value] of Object.entries(freshState().settings))if(s.settings[key]===undefined)s.settings[key]=value;
   if(s.focusTasks===undefined)s.focusTasks=[];
-  if(!Array.isArray(s.focusTasks)||s.focusTasks.length>20||new Set(s.focusTasks.map(t=>t?.id)).size!==s.focusTasks.length||s.focusTasks.some(t=>!object(t)||typeof t.id!=='string'||!t.id||t.id.length>80||typeof t.text!=='string'||!t.text.trim()||t.text.length>120||/[\u0000-\u001f\u007f]/u.test(t.text)))fail('SAVE_INVALID','タスクの保存データを読み取れません。',409);
+  if(!Array.isArray(s.focusTasks)||s.focusTasks.length>20||new Set(s.focusTasks.map(t=>t?.id)).size!==s.focusTasks.length||s.focusTasks.some(t=>!object(t)||typeof t.id!=='string'||!t.id||t.id.length>80||typeof t.text!=='string'||!t.text.trim()||t.text.length>120||/[\u0000-\u001f\u007f]/u.test(t.text)||(t.notion!==undefined&&!notionTaskRef(t.notion))))fail('SAVE_INVALID','タスクの保存データを読み取れません。',409);
   const existing=s.contentVersion!==CONTENT_VERSION;
   const was2E=s.contentVersion==='phase2e-2026-09-07';
   const wasChapterTwo=s.contentVersion==='chapter2-2026-09-07';
@@ -119,12 +122,23 @@ export function reduce(current,command,data,context={}){
     const reset=freshState();reset.displayName=s.displayName;reset.settings=structuredClone(s.settings);
     return {state:reset,outcome:{reset:true,checkpoint:true}};
   }
+  if(type==='focus.task.link'){
+    exactKeys(payload,['id','notion']);
+    const task=s.focusTasks.find(t=>t.id===payload.id);
+    if(!task)fail('TASK_MISSING','このタスクは完了済みか、見つかりません。記録を読み込み直してください。',409);
+    if(!notionPageId(payload.notion))fail('BAD_TASK','Notionのページを確認してください。');
+    if(task.notion!=='pending')fail('TASK_LINKED','このタスクはすでにNotionとつながっています。',409);
+    task.notion=payload.notion;
+    return {state:s,outcome:{taskChanged:true,checkpoint:true}};
+  }
   if(type==='focus.task.add'||type==='focus.task.complete'){
-    exactKeys(payload,type==='focus.task.add'?['text']:['id']);
+    exactKeys(payload,type==='focus.task.add'?['text','notion']:['id']);
     if(type==='focus.task.add'){
       if(typeof payload.text!=='string'||!payload.text.trim()||payload.text.length>120||/[\u0000-\u001f\u007f]/u.test(payload.text))fail('BAD_TASK','タスクは1〜120文字で入力してください。');
       if(s.focusTasks.length>=20)fail('TASK_LIMIT','タスクは20件までです。終わったものを完了してください。',409);
-      s.focusTasks.push({id:command.id,text:payload.text.trim()});
+      if(payload.notion!==undefined&&!notionTaskRef(payload.notion))fail('BAD_TASK','Notionのページを確認してください。');
+      if(notionPageId(payload.notion)&&s.focusTasks.some(t=>t.notion===payload.notion))fail('TASK_EXISTS','このNotionのタスクは、もう取り込んでいます。',409);
+      s.focusTasks.push({id:command.id,text:payload.text.trim(),...(payload.notion!==undefined?{notion:payload.notion}:{})});
     }else{
       if(typeof payload.id!=='string'||!s.focusTasks.some(t=>t.id===payload.id))fail('TASK_MISSING','このタスクは完了済みか、見つかりません。記録を読み込み直してください。',409);
       s.focusTasks=s.focusTasks.filter(t=>t.id!==payload.id);

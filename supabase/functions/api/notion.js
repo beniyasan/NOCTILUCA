@@ -91,3 +91,28 @@ export function connectionView(row, available) {
     source: row.data_source_id ? { id: row.data_source_id, name: row.data_source_name, doneName: row.done_property_name, doneType: row.done_type, doneOptionName: row.done_option_name } : null,
   };
 }
+
+// ---- task sync -------------------------------------------------------------
+// Rows that are not done yet, by the column the player chose.
+export function openTaskFilter(row) {
+  return row.done_type === 'checkbox'
+    ? { property: row.done_property, checkbox: { equals: false } }
+    : { property: row.done_property, status: { does_not_equal: row.done_option_name } };
+}
+// A task title as a focus task can hold it: one line, at most 120 characters.
+export function taskTitle(text) {
+  return String(text || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+}
+export function taskFromPage(page, titleProperty) {
+  const values = Object.values(page?.properties || {});
+  const title = values.find((v) => v?.id === titleProperty) || values.find((v) => v?.type === 'title');
+  return { id: page?.id, title: taskTitle(plain(title?.title)) };
+}
+export function newTaskPage(row, text) {
+  const title = taskTitle(text);
+  if (!title) fail('BAD_TASK', 'タスクは1〜120文字で入力してください。');
+  return { parent: { type: 'data_source_id', data_source_id: row.data_source_id }, properties: { [row.title_property]: { title: [{ type: 'text', text: { content: title } }] } } };
+}
+export function doneUpdate(row) {
+  return { properties: { [row.done_property]: row.done_type === 'checkbox' ? { checkbox: true } : { status: { id: row.done_option } } } };
+}

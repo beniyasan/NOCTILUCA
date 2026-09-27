@@ -4,7 +4,7 @@ import data from "./game/content.js";
 import { DEFAULT_FEEDS, filterHeadlines, jstDay, parseFeed, responseText, sanitizeTalks, talkRequest } from "./passenger-talk.js";
 import { JOURNAL_LIMITS, journalCommand, journalDay, journalSummary, journalView } from "./journal.js";
 import { journalAiInput, journalAiRequest, journalAiText } from "./journal-ai.js";
-import { NOTION_API, NOTION_VERSION, authorizeUrl, checkMapping, connectionView, openTokens, plain, sealTokens, signState, summarizeSource, verifyState } from "./notion.js";
+import { NOTION_API, NOTION_VERSION, authorizeUrl, checkMapping, connectionView, doneUpdate, newTaskPage, openTaskFilter, openTokens, plain, sealTokens, signState, summarizeSource, taskFromPage, verifyState } from "./notion.js";
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 const enc = new TextEncoder();
@@ -299,8 +299,29 @@ async function notionRoute(request: Request, url: URL, db: SupabaseClient, playe
     if (!notionId(id)) fail("BAD_INPUT", "データベースを選んでください。");
     return summarizeSource(await notionFetch(db, row, `/data_sources/${id}`));
   }
+  const configured = () => { if (!row?.data_source_id) fail("NOTION_NOT_CONFIGURED", "Notionのデータベースを選んでください。", 409); return row; };
+  // Open tasks to pick from, most recently edited first.
+  if (request.method === "GET" && path.endsWith("/notion/tasks")) {
+    const r = configured();
+    const data = await notionFetch(db, r, `/data_sources/${r.data_source_id}/query`, { method: "POST", body: JSON.stringify({ filter: openTaskFilter(r), sorts: [{ timestamp: "last_edited_time", direction: "descending" }], page_size: 100 }) });
+    return { more: !!data.has_more, tasks: (data.results || []).filter((p: { in_trash?: boolean; is_archived?: boolean }) => !p.in_trash && !p.is_archived).map((p: unknown) => taskFromPage(p, r.title_property)).filter((t: { title: string }) => t.title) };
+  }
   if (request.method !== "POST") return null;
   if (request.headers.get("x-noctiluca-client") !== "1") fail("CSRF", "この画面から操作をやり直してください。", 403);
+  if (path.endsWith("/notion/tasks/create")) {
+    const r = configured(), input = await body(request);
+    exactKeys(input, ["text"]);
+    const page = await notionFetch(db, r, "/pages", { method: "POST", body: JSON.stringify(newTaskPage(r, (input as Record<string, unknown>).text)) });
+    return { pageId: page.id };
+  }
+  if (path.endsWith("/notion/tasks/complete")) {
+    const r = configured(), input = await body(request);
+    exactKeys(input, ["pageId"]);
+    const pageId = (input as Record<string, unknown>).pageId;
+    if (!notionId(pageId)) fail("BAD_INPUT", "Notionのページを確認してください。");
+    await notionFetch(db, r, `/pages/${pageId}`, { method: "PATCH", body: JSON.stringify(doneUpdate(r)) });
+    return { done: true };
+  }
   if (path.endsWith("/notion/start")) {
     if (!notionReady()) fail("NOTION_UNAVAILABLE", "Notion連携は、いまは使えません。", 503);
     return { url: authorizeUrl({ clientId: notionClientId, redirectUri: notionRedirect(), state: await signState(playerId, notionKey) }) };

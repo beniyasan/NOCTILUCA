@@ -1,7 +1,8 @@
 // Notion connection screen (Lolipop edition, signed-in players): connect through
 // Notion's own permission page, pick the task database and its "done" column,
 // or disconnect. Only the Lolipop gateway has notion* methods; elsewhere the
-// entry stays hidden. Task syncing itself lives with the timer tasks.
+// entry stays hidden. Also keeps focus tasks in step with the chosen database:
+// picking open Notion tasks, sending tasks added here, and marking them done there.
 const $=id=>document.getElementById(id);
 const RETURNS={
  connected:'Notionと連携しました。使うデータベースと、完了を表す列を選んでください。',
@@ -20,7 +21,7 @@ export function createNotionUI(gateway){
  function options(select,list,placeholder){select.replaceChildren(...(placeholder?[new Option(placeholder,'')]:[]),...list.map(([value,label])=>new Option(label,value)));}
  async function run(task){if(busy)return;busy=true;paint();try{await task();}catch(e){message(errorText(e));if(e?.code==='NOTION_REAUTH')status={...status,connected:false};}finally{busy=false;paint();}}
 
- function paint(){
+ let paint=function(){
   $('notion-open').hidden=!supported||(status&&!status.available&&signedIn());
   if(!dialog)return;
   const connected=!!status?.connected,setup=connected&&(!status.source||editing);
@@ -32,7 +33,7 @@ export function createNotionUI(gateway){
   $('notion-done-field').hidden=!summary;$('notion-option-field').hidden=done?.type!=='status';
   $('notion-save').disabled=busy||!summary||!done||(done.type==='status'&&!$('notion-option').value);
   for(const id of ['notion-connect','notion-reconnect','notion-change','notion-disconnect'])$(id).disabled=busy;
- }
+ };
  async function loadSources(){
   await run(async()=>{
    const r=await gateway.notionSources();sources=r.sources;summary=null;
@@ -85,6 +86,69 @@ export function createNotionUI(gateway){
  const back=/^#notion=(\w+)$/.exec(location.hash)?.[1];
  if(back&&supported){history.replaceState(null,'',location.pathname+location.search);void open(RETURNS[back]||RETURNS.error);}
  else if(signedIn())void refresh().then(paint,()=>{});
+ // ---- task sync ----
+ const isPage=v=>typeof v==='string'&&v!=='pending';
+ const ready=()=>signedIn()&&!!status?.source;
+ const tasks=()=>gateway.snapshot?.state?.focusTasks||[];
+ // Completions that could not reach Notion wait on this device and are retried later.
+ const doneKey=()=>'noctiluca.notion.pendingDone.'+(gateway.snapshot?.playerId||'');
+ const readDone=()=>{try{return JSON.parse(localStorage.getItem(doneKey())||'[]');}catch{return [];}};
+ const writeDone=list=>{try{localStorage.setItem(doneKey(),JSON.stringify(list.slice(-50)));}catch{/* retried only while the page is open */}};
+ let flushing=false;
+ async function push(task){const r=await gateway.notionPost('tasks/create',{text:task.text});await gateway.send('focus.task.link',{id:task.id,notion:r.pageId});}
+ async function complete(task){
+  if(!isPage(task?.notion))return true;
+  try{await gateway.notionPost('tasks/complete',{pageId:task.notion});return true;}
+  catch{writeDone([...readDone().filter(id=>id!==task.notion),task.notion]);return false;}
+ }
+ // Resend what failed before: tasks still marked pending, completions still queued.
+ async function flush(){
+  if(flushing||!ready()||gateway.blocked)return;flushing=true;
+  try{
+   for(const task of tasks().filter(t=>t.notion==='pending')){try{await push(task);}catch{break;}}
+   let queued=readDone();
+   for(const pageId of [...queued]){try{await gateway.notionPost('tasks/complete',{pageId});queued=queued.filter(id=>id!==pageId);}catch(e){if(e?.code!=='NOTION_NOT_FOUND')break;queued=queued.filter(id=>id!==pageId);}}
+   writeDone(queued);
+  }finally{flushing=false;}
+ }
+ // Picking open Notion tasks in the focus dialog, before the timer starts.
+ let picks=[],picking=false;
+ function pickMessage(text){$('notion-pick-message').textContent=text;}
+ function paintPick(){
+  const box=$('notion-pick');if(!box)return;box.hidden=!ready();
+  const open=!$('notion-pick-panel').hidden,chosen=[...$('notion-pick-list').querySelectorAll('input:checked')].length,room=20-tasks().length;
+  $('notion-pick-open').setAttribute('aria-expanded',String(open));$('notion-pick-open').hidden=open;
+  $('notion-pick-add').disabled=picking||!chosen||chosen>room;$('notion-pick-add').textContent=chosen?chosen+'件を取り込む':'選んだタスクを取り込む';
+  if(chosen>room)pickMessage('タスクは20件までです。あと'+Math.max(0,room)+'件選べます。');
+ }
+ async function openPick(){
+  $('notion-pick-panel').hidden=false;pickMessage('読み込み中…');$('notion-pick-list').replaceChildren();paintPick();
+  try{
+   const r=await gateway.notionTasks(),have=new Set(tasks().map(t=>t.notion).filter(isPage));picks=r.tasks.filter(t=>!have.has(t.id));
+   $('notion-pick-list').replaceChildren(...picks.map(t=>{const li=document.createElement('li'),label=document.createElement('label'),box=document.createElement('input');box.type='checkbox';box.value=t.id;box.addEventListener('change',paintPick);label.append(box,document.createTextNode(t.title));li.append(label);return li;}));
+   pickMessage(picks.length?(r.more?'最近更新した100件から表示しています。':''):'取り込める未完了のタスクはありません。');
+  }catch(e){pickMessage(errorText(e));}
+  paintPick();
+ }
+ async function addPicked(){
+  const ids=[...$('notion-pick-list').querySelectorAll('input:checked')].map(b=>b.value),chosen=picks.filter(t=>ids.includes(t.id));
+  picking=true;paintPick();let added=0;
+  try{for(const t of chosen){await gateway.send('focus.task.add',{text:t.title,notion:t.id});added++;}$('notion-pick-panel').hidden=true;pickMessage('');}
+  catch(e){pickMessage(errorText(e));}
+  finally{picking=false;paintPick();if(added&&$('timer-quick-task-message'))$('timer-quick-task-message').textContent='Notionから'+added+'件取り込みました。';}
+ }
+ $('notion-pick-open')?.addEventListener('click',()=>void openPick());
+ $('notion-pick-close')?.addEventListener('click',()=>{$('notion-pick-panel').hidden=true;pickMessage('');paintPick();});
+ $('notion-pick-add')?.addEventListener('click',()=>void addPicked());
+ for(const id of ['timer-open','timer-overlay-open','route-timer-open'])$(id)?.addEventListener('click',()=>{$('notion-pick-panel').hidden=true;paintPick();void flush();});
+ gateway.addEventListener('change',()=>paintPick());
+ const repaint=paint;paint=()=>{repaint();paintPick();};
  paint();
- return {get status(){return status;},refresh:()=>refresh().then(paint)};
+ return {
+  get status(){return status;},refresh:()=>refresh().then(paint),
+  // A task has just been added here: send it to Notion when connected. Returns false if it has to wait.
+  get sending(){return ready();},
+  async added(task){if(!ready()||task?.notion!=='pending')return true;try{await push(task);return true;}catch{return false;}},
+  completed:complete,flush,
+ };
 }

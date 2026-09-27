@@ -68,3 +68,35 @@ test('Notion storage and routes stay server-side',async()=>{
  assert.match(api,/start_cursor: cursor/);assert.match(api,/data\.has_more/);
  assert.match(gateway,/notionPost\(action/);assert.doesNotMatch(sites,/notion/i);
 });
+
+import {openTaskFilter,taskTitle,taskFromPage,newTaskPage,doneUpdate} from '../../supabase/functions/api/notion.js';
+import {freshState,reduce} from '../../src/game/rules.js';
+const PAGE='59b8df07-1111-4222-8333-944455556666',PAGE2='59b8df07111142228333944455557777';
+const cmd=(s,type,payload,id='cmd-0000000001')=>reduce(s,{id,type,payload},{},{now:'2026-09-27T12:00:00Z'}).state;
+test('focus tasks may carry a Notion page, or wait to be sent there',()=>{
+ let s=freshState();s.displayName='旅人';
+ s=cmd(s,'focus.task.add',{text:'資料をまとめる',notion:PAGE},'task-a');s=cmd(s,'focus.task.add',{text:'図を描く',notion:'pending'},'task-b');s=cmd(s,'focus.task.add',{text:'ここだけのメモ'},'task-c');
+ assert.deepEqual(s.focusTasks,[{id:'task-a',text:'資料をまとめる',notion:PAGE},{id:'task-b',text:'図を描く',notion:'pending'},{id:'task-c',text:'ここだけのメモ'}]);
+ assert.throws(()=>cmd(s,'focus.task.add',{text:'二重',notion:PAGE},'task-d'),e=>e.code==='TASK_EXISTS');
+ for(const notion of ['nope','',42,'pending-x'])assert.throws(()=>cmd(s,'focus.task.add',{text:'x',notion},'task-e'),e=>e.code==='BAD_TASK');
+ s=cmd(s,'focus.task.link',{id:'task-b',notion:PAGE2},'link-1');assert.equal(s.focusTasks[1].notion,PAGE2);
+ assert.throws(()=>cmd(s,'focus.task.link',{id:'task-b',notion:PAGE},'link-2'),e=>e.code==='TASK_LINKED');
+ assert.throws(()=>cmd(s,'focus.task.link',{id:'task-c',notion:PAGE},'link-3'),e=>e.code==='TASK_LINKED','only pending tasks are linked');
+ assert.throws(()=>cmd(s,'focus.task.link',{id:'missing',notion:PAGE},'link-4'),e=>e.code==='TASK_MISSING');
+ assert.throws(()=>cmd(s,'focus.task.link',{id:'task-a',notion:'pending'},'link-5'),e=>e.code==='BAD_TASK');
+});
+const checkboxRow={data_source_id:'ds-1',title_property:'title',done_type:'checkbox',done_property:'a%3Db',done_option:null,done_option_name:null};
+const statusRow={...checkboxRow,done_type:'status',done_property:'stat',done_option:'o3',done_option_name:'完了'};
+test('open tasks are filtered and written by the chosen done column',()=>{
+ assert.deepEqual(openTaskFilter(checkboxRow),{property:'a%3Db',checkbox:{equals:false}});
+ assert.deepEqual(openTaskFilter(statusRow),{property:'stat',status:{does_not_equal:'完了'}});
+ assert.deepEqual(doneUpdate(checkboxRow),{properties:{'a%3Db':{checkbox:true}}});
+ assert.deepEqual(doneUpdate(statusRow),{properties:{stat:{status:{id:'o3'}}}});
+ assert.deepEqual(newTaskPage(statusRow,' 図を\n描く '),{parent:{type:'data_source_id',data_source_id:'ds-1'},properties:{title:{title:[{type:'text',text:{content:'図を 描く'}}]}}});
+ assert.throws(()=>newTaskPage(statusRow,'  '),e=>e.code==='BAD_TASK');
+});
+test('Notion titles become valid focus tasks',()=>{
+ assert.equal(taskTitle('a'.repeat(200)).length,120);assert.equal(taskTitle('一行目\n二行目\t終わり'),'一行目 二行目 終わり');
+ assert.deepEqual(taskFromPage({id:PAGE,properties:{Name:{id:'title',type:'title',title:[{plain_text:'資料'},{plain_text:'をまとめる'}]},Done:{id:'x',type:'checkbox',checkbox:false}}},'title'),{id:PAGE,title:'資料をまとめる'});
+ assert.equal(taskFromPage({id:PAGE,properties:{}},'title').title,'');
+});

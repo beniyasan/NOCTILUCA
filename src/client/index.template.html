@@ -128,6 +128,14 @@
     <label for="timer-quick-task-input">タスク</label>
     <ul id="timer-quick-task-list" aria-label="未完了のタスク"></ul>
     <div class="timer-task-entry"><input id="timer-quick-task-input" type="text" maxlength="120" autocomplete="off" placeholder="例：見出しを3つ書く" aria-describedby="timer-quick-task-help"><button type="button" id="timer-quick-task-add">追加</button></div>
+    <div id="notion-pick" class="notion-pick" hidden>
+     <button type="button" id="notion-pick-open" class="journal-link" aria-expanded="false" aria-controls="notion-pick-panel">Notionのタスクから選ぶ</button>
+     <div id="notion-pick-panel" class="notion-pick-panel" hidden>
+      <ul id="notion-pick-list" aria-label="Notionの未完了タスク"></ul>
+      <p id="notion-pick-message" class="timer-status" role="status"></p>
+      <div class="notion-actions"><button type="button" id="notion-pick-add" disabled>選んだタスクを取り込む</button><button type="button" id="notion-pick-close" class="journal-link">閉じる</button></div>
+     </div>
+    </div>
     <p id="timer-quick-task-help" class="timer-help">任意・20件まで。Enterでも追加できます。完了にするのは、始めたあと車窓のタイマーから。</p>
     <p id="timer-quick-task-message" class="timer-status" role="status"></p>
    </div>

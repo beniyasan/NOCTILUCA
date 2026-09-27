@@ -39,6 +39,7 @@ export class Gateway extends EventTarget {
  // Notion connection (signed-in only). The server holds the tokens; the page only sees names.
  notionStatus(){return this.request('/notion/status');}
  notionSources(){return this.request('/notion/sources');}
+ notionTasks(){return this.request('/notion/tasks');}
  notionSource(id){return this.request('/notion/source?id='+encodeURIComponent(id));}
  notionPost(action,payload={}){return this.request('/notion/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-Noctiluca-Client':'1'},body:JSON.stringify(payload)});}
  // Passenger talk from the day's headlines; null means "use the templates".
