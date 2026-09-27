@@ -55,31 +55,33 @@ test('focus scenery reserves the arrival sequence inside the existing deadline, 
  c.resume();now+=10001;assert.equal(c.poll(),'work');assert.equal(focusPassage(c.view.total,c.view.remainingMs).crossing,1);
 });
 import {DISTRICTS,ROUTE_VARIANTS,routeOrder,districtAt} from '../../src/client/scenery.js';
-test('Kowloon rides out along a different street each visit, all eight districts in play',()=>{
- assert.equal(DISTRICTS.kowloon.length,8);
- for(const [name,line] of DISTRICTS.kowloon){assert.ok(name&&line);}
- const used=new Set();
- ROUTE_VARIANTS.kowloon.forEach((order,visit)=>{
-  assert.deepEqual(routeOrder('kowloon',visit),order);
-  assert.equal(order[0],0);assert.equal(new Set(order).size,4,'three different districts after the station');
-  for(const duration of [5,1500]){
-   const seen=[];for(let step=0;step<=1000;step++){const v=routeScene('kowloon',step/1000,duration,visit);if(seen.at(-1)!==v.to)seen.push(v.to);}
-   assert.deepEqual(seen,order);
-  }
-  order.forEach(d=>used.add(d));
- });
- assert.deepEqual([...used].sort(),[0,1,2,3,4,5,6,7]);
- // Arriving in Kowloon comes in through the same outer district the visit's ride out leaves by.
- ROUTE_VARIANTS.kowloon.forEach((order,visit)=>{assert.equal(approachScene('kowloon',0,visit).to,order[3]);assert.deepEqual(approachScene('kowloon',1,visit),{from:0,to:0,mix:1});});
+test('Kowloon, the Scrap Belt and Pelagic Dock ride out a different way each visit, all eight districts in play',()=>{
+ for(const world of ['kowloon','scrap','pelagic']){
+  assert.equal(DISTRICTS[world].length,8,world);
+  for(const [name,line] of DISTRICTS[world])assert.ok(name&&line,world);
+  const variants=ROUTE_VARIANTS[world],used=new Set();
+  assert.deepEqual(variants[0],ROUTES[world],world+': the first ride keeps the original order');
+  variants.forEach((order,visit)=>{
+   assert.deepEqual(routeOrder(world,visit),order);
+   assert.equal(order[0],0);assert.equal(new Set(order).size,4,world+': three different districts after the station');
+   for(const duration of [5,1500]){
+    const seen=[];for(let step=0;step<=1000;step++){const v=routeScene(world,step/1000,duration,visit);if(seen.at(-1)!==v.to)seen.push(v.to);}
+    assert.deepEqual(seen,order,world);
+   }
+   // Arriving comes in through the same outer district the visit's ride out leaves by.
+   assert.equal(approachScene(world,0,visit).to,order[3]);assert.deepEqual(approachScene(world,1,visit),{from:0,to:0,mix:1});
+   order.forEach(d=>used.add(d));
+  });
+  assert.deepEqual([...used].sort(),[0,1,2,3,4,5,6,7],world);
+  const cruising=new Set();for(let visit=0;visit<14;visit++)for(let dist=0;dist<88;dist+=22)cruising.add(districtAt(dist,visit,7));
+  assert.deepEqual([...cruising].sort(),[0,1,2,3,4,5,6,7]);
+ }
+ // Other worlds keep their single fixed route.
+ assert.deepEqual(routeOrder('gorge',5),ROUTES.gorge);
+ assert.ok([0,1,2,3].includes(districtAt(30,5)),'three-district worlds unchanged');
  // Every place the engine asks for a route passes the visit, so no view falls back to the first order.
  const engine=readFileSync('src/client/engine.js','utf8');
  const calls=engine.split('routeScene(').slice(1).map(rest=>rest.slice(0,rest.search(/;|\n/)));
  assert.equal(calls.length,3);for(const call of calls)assert.match(call,/state\.currentVisit\?\.count\|\|0\)/,call);
  assert.match(engine,/approachScene\(tr\.next\.p\.id,approach,tr\.visit\?\.count\|\|0\)/);
- // Other worlds keep their single fixed route.
- assert.deepEqual(routeOrder('scrap',5),ROUTES.scrap);
- // Free cruising ("この星を、ずっと") also reaches the new districts over visits.
- const cruising=new Set();for(let visit=0;visit<14;visit++)for(let dist=0;dist<88;dist+=22)cruising.add(districtAt(dist,visit,7));
- assert.deepEqual([...cruising].sort(),[0,1,2,3,4,5,6,7]);
- assert.ok([0,1,2,3].includes(districtAt(30,5)),'three-district worlds unchanged');
 });

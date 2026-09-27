@@ -2,11 +2,13 @@ import {createPlaceScenes} from './place-scenes.js';
 import {unit} from './anim-utils.js';
 import {frontier} from './frontier-scenes.js';
 import {KOWLOON_EXTRA,createKowloonDistricts} from './kowloon-districts.js';
+import {SCRAP_EXTRA,createScrapDistricts} from './scrap-districts.js';
+import {PELAGIC_EXTRA,createPelagicDistricts} from './pelagic-districts.js';
 // View-only districts. These never send commands or modify a player's world.
 export const DISTRICTS={
  kowloon:[['駅前の広告街','重なる看板と、小さな高架列車。'],['深夜の市場','重なる看板と濡れた窓。路地を譲り合い、湯気が換気口へ流れる。'],['運河沿い','建物が途切れ、水面に広告の灯りが伸びる。荷船が橋をくぐる。'],['屋上の住宅街','物干しと給水塔。換気扇のそばで、誰かが夜食をとっている。'],...KOWLOON_EXTRA],
- scrap:[['船底の工房街','回収船の骨組みに、工房の明かりが残る。'],['廃船の泊地','船殻の内側に小さな工房。クレーンが荷をつかみ、ゆっくり持ち上げる。'],['資材の選別場','ベルトが部品を運び、クレーンが次の箱を持ち上げる。'],['機関の修理区','外された推進機。作業灯の下で、試運転と手入れが続く。']],
- pelagic:[['灯台の埠頭','浮体港の灯台が、入港する船を照らす。'],['外海の観測帯','水平線の手前で、船と浮桟橋が揺れる。水面の下を大きな影が渡る。'],['船の整備ドック','停泊船の側面を、整備台が上り下りしている。'],['養殖の入り江','丸い生け簀の間を、給餌艇が巡回する。']],
+ scrap:[['船底の工房街','回収船の骨組みに、工房の明かりが残る。'],['廃船の泊地','船殻の内側に小さな工房。クレーンが荷をつかみ、ゆっくり持ち上げる。'],['資材の選別場','ベルトが部品を運び、クレーンが次の箱を持ち上げる。'],['機関の修理区','外された推進機。作業灯の下で、試運転と手入れが続く。'],...SCRAP_EXTRA],
+ pelagic:[['灯台の埠頭','浮体港の灯台が、入港する船を照らす。'],['外海の観測帯','水平線の手前で、船と浮桟橋が揺れる。水面の下を大きな影が渡る。'],['船の整備ドック','停泊船の側面を、整備台が上り下りしている。'],['養殖の入り江','丸い生け簀の間を、給餌艇が巡回する。'],...PELAGIC_EXTRA],
  gorge:[['岩棚の居住区','昇降機が、谷の上と下をつないでいる。'],['峡谷を渡る橋','手前の岩壁が途切れ、深い谷が開ける。吊られた荷が揺れながら橋を渡る。'],['段々の採石場','切り出した石が、斜面の搬送路を少しずつ下っていく。'],['崖沿いの集落','岩に沿った窓と通路。小さなリフトが生活の荷物を運ぶ。']],
  jade:[['段々温室','花のある温室と、庭師の作業場。'],['大樹の回廊','葉の奥に温室が見える。鳥が止まって枝がしなり、葉先から滴が落ちる。'],['苗の育成区','低い温室が並び、散水の列が奥から順に動く。'],['水庭のほとり','水を渡る細い橋。せせらぎと、ゆっくり動く手入れ舟。']],
  relay:[['中継環の周辺','無人の接続環で、いつもの点検が続く。'],['遠距離アンテナ群','暗い余白に受信皿が浮かぶ。信号灯が伝わり、点検機が止まって確かめる。'],['貨物の接続区','搬送ポッドが列を作り、一つずつ接続口へ入っていく。'],['外縁の集電翼','集電パネルが星へ角度を合わせる。点検機が枠をたどる。']],
@@ -28,7 +30,11 @@ export const ROUTES={
 };
 // Kowloon has more districts than one ride shows, so the ride out of town takes a
 // different street each visit. Each order still visits three districts once.
-export const ROUTE_VARIANTS={kowloon:[[0,1,3,2],[0,4,5,2],[0,6,7,3],[0,5,1,6],[0,7,4,2],[0,4,6,3]]};
+export const ROUTE_VARIANTS={
+ kowloon:[[0,1,3,2],[0,4,5,2],[0,6,7,3],[0,5,1,6],[0,7,4,2],[0,4,6,3]],
+ scrap:[[0,3,2,1],[0,5,4,6],[0,7,2,6],[0,4,3,5],[0,7,5,1],[0,2,4,6]],
+ pelagic:[[0,2,3,1],[0,4,5,6],[0,7,2,6],[0,5,3,4],[0,4,7,1],[0,5,2,6]],
+};
 export function routeOrder(world,visit=0){const v=ROUTE_VARIANTS[world];return v?v[Math.max(0,visit)%v.length]:ROUTES[world];}
 export function routeScene(world,progress,duration,visit=0){
  const order=routeOrder(world,visit),p=unit(progress),boundaries=[.10,.36,.67];
@@ -70,7 +76,9 @@ export function createDistrictJourney(){
  };
 }
 export function createDistrictRenderer(a){
- const places=createPlaceScenes(a),kowloon=createKowloonDistricts(a);
+ const places=createPlaceScenes(a);
+ // Worlds with more than four districts draw the extras (and alternate blocks) in their own module.
+ const extras={neon:createKowloonDistricts(a),scrap:createScrapDistricts(a),water:createPelagicDistricts(a)};
  const {surface,rect,line,ellipse,poly,rand,ir,tower,pagoda,dome,industry,gardenTree,boulder,wreck,crate,sign,person,steam,drone,robot,rotatingFan,workCrane,shipBoat,drawRay,drawRelayRing,mod,shuttling}=a;
  function layer(p,depth,width,TILE,HEIGHT){
   if(frontier.owns(p))return frontier.layer(p,depth,width);
@@ -79,13 +87,13 @@ export function createDistrictRenderer(a){
   const pp=depth===0?{...p,mid:p.far,near:p.far,trim:p.trim}:p;
   if(depth===1){
    const floor=p.kind==='neon'?(d===1?387:d===3?428:0):p.kind==='garden'?(d===1?405:d===2?379:0):p.kind==='scrap'?400:0;
-   if(p.kind==='neon'&&d>=4)kowloon.floor(c,d,TILE,p);
+   if(extras[p.kind]&&d>=4)extras[p.kind].floor(c,d,TILE,p);
    if(floor){rect(c,0,floor,TILE,HEIGHT-floor,p.near);line(c,0,floor,TILE,floor,p.trim,2);for(let x=0;x<TILE;x+=48){line(c,x,floor+14,x+23,floor+14,p.trim+'44');line(c,x+31,floor+31,x+53,floor+31,p.trim+'33');}}
   }
   // Reuse the established pixel sprites, with different massing and open space.
   for(let x=-768;x<=TILE;x+=768){
    const r=rand(p.seed+depth*177+mod(x,TILE)*31);
-   if(p.kind==='neon'&&kowloon.layer(c,x,d,depth,p,r))continue;
+   if(extras[p.kind]?.layer(c,x,d,depth,p,r))continue;
    if(depth===0){
     if(p.kind==='rock'){boulder(c,x,420,d===1?165:330,d===1?220:300,pp,r,false);if(d!==1)boulder(c,x+290,420,200,240,pp,r,false);}
     else if(p.kind==='water'){if(d!==1){dome(c,x+30,286,130,d===2?84:48,pp,r);dome(c,x+230,286,90,42,pp,r);}}
@@ -144,10 +152,10 @@ export function createDistrictRenderer(a){
   if(frontier.owns(s.p)){frontier.life(c,s,clock,travel,width,quiet);return;}
   if(places.owns(s.p)){places.life(c,s,clock,travel,width,quiet);return;}
   const p=s.p,d=p.district,start=-mod(travel*8.5,768);
-  if(p.kind==='neon'&&d>=4)kowloon.wide(c,d,clock,travel,width,p);
+  if(extras[p.kind]&&d>=4)extras[p.kind].wide(c,d,clock,travel,width,p);
   for(let x=start-768;x<width+768;x+=768){
    const t=clock+mod(Math.round((x+travel*8.5)/768),3)*11;
-   if(p.kind==='neon'&&d>=4){kowloon.life(c,x,d,t,p,quiet,mod(Math.round((x+travel*8.5)/768),3));continue;}
+   if(extras[p.kind]&&d>=4){extras[p.kind].life(c,x,d,t,p,quiet,mod(Math.round((x+travel*8.5)/768),3));continue;}
    if(p.kind==='neon'){
     if(d===1){for(let k=0;k<(quiet?2:4);k++){const xx=x+45+k*100;person(c,xx,387,t+k,p,{action:'work',coat:'#b39b81'});steam(c,xx+15,364,t+k,p,3);}const a=shuttling(t,37);person(c,x+30+a.f*340,402,t,p,{walk:true,dir:a.dir,carry:true});}
     else if(d===2){if(s.momentState?.active?.id!=='boat_yield'&&!s.momentState?.done?.boat_yield)shipBoat(c,x+mod(t*8,440),391,t,p,.9);const a=shuttling(t,51);person(c,x+40+a.f*380,329,t,p,{walk:true,dir:a.dir});}

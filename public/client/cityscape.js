@@ -141,6 +141,21 @@ function heroWater(c,x,p,r){
  // Tall gantry crane.
  line(c,x+141,112,x+141,314,p.trim,5);line(c,x+136,112,x+136,314,p.near,3);line(c,x+100,123,x+239,123,p.trim,4);line(c,x+140,104,x+213,122,p.accent,1);line(c,x+211,124,x+211,193,p.trim);rect(c,x+207,191,9,7,p.near);for(let yy=133;yy<295;yy+=15){line(c,x+133,yy,x+144,yy+10,p.trim);}glow(c,x+139,103,3,2,p.neon);
 }
+// Second landmarks for the Scrap Belt and Pelagic Dock fronts (see heroNeonB).
+function heroScrapB(c,x,p,r,base=319){
+ // A salvaged bow standing on end, turned into a lodging house.
+ const top=base-207;poly(c,[[x,base],[x+18,top+38],[x+60,top],[x+102,top+38],[x+120,base]],'#5a3a2a');poly(c,[[x+10,base],[x+26,top+48],[x+60,top+16],[x+94,top+48],[x+110,base]],p.mid);
+ for(let k=0;k<6;k++)for(let j=0;j<3;j++)rect(c,x+30+j*22,top+60+k*22,12,10,(k+j)%3?p.light+'bb':p.accent+'77');
+ for(let k=0;k<4;k++)line(c,x+12,top+78+k*32,x+108,top+78+k*32,p.trim,2);sign(c,x+124,top+64,15,70,p,r,true,'船宿');sign(c,x+14,base-26,92,16,p,r,false,'BOW INN');
+ line(c,x+60,top,x+60,top-32,p.trim,2);rect(c,x+56,top-34,8,4,p.neon);glow(c,x+54,top-36,12,6,p.neon,8);
+}
+function heroWaterB(c,x,p,r,base=319){
+ // A tide-signal mast with a turning radar, a lit pilot office at its foot.
+ line(c,x+60,90,x+60,base,p.trim,5);line(c,x+56,90,x+56,base,p.near,2);for(let yy=110;yy<base-20;yy+=18)line(c,x+48,yy,x+68,yy+12,p.trim);
+ rect(c,x+30,84,60,8,p.trim);ellipse(c,x+60,78,26,5,p.near);rect(c,x+36,74,48,4,p.accent);glow(c,x+34,70,52,8,p.accent,10);
+ for(let k=0;k<5;k++)rect(c,x+80,130+k*26,24,6,k%2?p.neon:p.light);
+ rect(c,x+10,base-57,110,57,p.mid);rect(c,x+10,base-61,110,5,p.trim);for(let k=0;k<5;k++)rect(c,x+18+k*20,base-47,12,14,p.light+'bb');sign(c,x+14,base-23,102,16,p,r,false,'PILOT 12');
+}
 function heroDesert(c,x,p,r){
  industry(c,x,352,108,220,p,r);const tx=x+117;rect(c,tx,127,29,225,p.mid);rect(c,tx+5,113,19,16,p.trim);for(let yy=137;yy<342;yy+=22){rect(c,tx-5,yy,39,5,p.trim);for(let xx=tx;xx<tx+29;xx+=6)rect(c,xx,yy+3,2,7,p.near);}poly(c,[[tx,127],[tx+6,100],[tx+22,100],[tx+29,127]],p.near);rect(c,tx+4,97,21,4,p.neon);pipe(c,[[x+20,230],[x-21,230],[x-21,306],[tx+45,306],[tx+45,257]],p,6);sign(c,x-14,245,17,58,p,r,true,'赤砂');
  const bx=x+24,by=164;ellipse(c,bx,by,36,36,p.near);ellipse(c,bx,by,32,32,p.trim);ellipse(c,bx,by,27,27,'#302531');ellipse(c,bx,by,23,23,p.neon);ellipse(c,bx,by,17,17,'#352532');for(let i=0;i<8;i++){const a=i*Math.PI/4;line(c,bx+Math.cos(a)*7,by+Math.sin(a)*7,bx+Math.cos(a)*22,by+Math.sin(a)*22,p.light,2);}text(c,'SOL-41',bx,by+47,p.light,1,'center');
@@ -248,7 +263,7 @@ export function boulder(c,x,base,w,h,p,r,detail=true){
  for(let j=0;j<60;j++)rect(c,x+r()*w,base-r()*h,1+r()*9,1+r()*2,r()>.6?p.trim+'55':p.near+'66');
  c.restore();}
 }
-export function wreck(c,x,y,w,h,p,r,inhabited=false){
+export function wreck(c,x,y,w,h,p,r,inhabited=false,label='HULL CAFE'){
  poly(c,[[x,y+h*.3],[x+w*.17,y],[x+w*.82,y+7],[x+w,y+h*.56],[x+w*.87,y+h],[x+w*.14,y+h*.92]],p.mid);
  poly(c,[[x+w*.14,y+h*.54],[x+w*.9,y+h*.58],[x+w*.87,y+h],[x+w*.14,y+h*.92]],p.near);
  for(let k=0;k<8;k++){let xx=x+w*.16+k*w*.085;line(c,xx,y+5,xx-12,y+h*.92,p.trim,2);}
@@ -261,7 +276,7 @@ export function wreck(c,x,y,w,h,p,r,inhabited=false){
   for(let j=0;j<12;j++){let px=x+w*.18+j*w*.043;rect(c,px,y+12,2,2,p.trim);rect(c,px-10,y+h*.83,2,2,p.trim);}
   c.restore();
   for(let k=0;k<4;k++){const xx=x+w*.2+k*25;rect(c,xx,y+h*.36,16,17,'#080f19');rect(c,xx+2,y+h*.36+2,12,12,k%2?p.light:p.accent);rect(c,xx+7,y+h*.36,2,17,p.mid);}
-  rect(c,x+w*.14,y+h*.73,w*.52,7,p.trim);sign(c,x+w*.2,y+h*.73-17,76,15,p,r,false,'HULL CAFE');
+  rect(c,x+w*.14,y+h*.73,w*.52,7,p.trim);sign(c,x+w*.2,y+h*.73-17,76,15,p,r,false,label);
   for(let k=0;k<3;k++)crate(c,x+w*.17+k*18,y+h-13,14,12,p);
  }
 }
@@ -272,8 +287,10 @@ function specializedLayer(p,depth,width){
    const pp={...p,mid:p.far,near:'#242631',trim:'#53505a'};
    for(let x=-100;x<TILE;x+=310){wreck(c,x,238+r()*39,280+r()*90,78+r()*70,pp,r);line(c,x+160,214,x+160,355,pp.trim,3);line(c,x+130,231,x+240,231,pp.trim,2);}
   }else if(depth===1){
-   for(let x=-190;x<TILE;x+=470){wreck(c,x,302+ir(r,-12,5),235,79,p,r,true);for(let k=0;k<5;k++)crate(c,x+25+k*28,398-18-(k%2)*14,26,17,p);}
-   for(const h of [hx,hx+1180]){
+   for(let x=-190,k=0;x<TILE;x+=470,k++){wreck(c,x,302+ir(r,-12,5),235,79,p,r,true,['WELD','PARTS','BUNK','TOOLS','NOODLE','RADIO'][k%6]);for(let k=0;k<5;k++)crate(c,x+25+k*28,398-18-(k%2)*14,26,17,p);}
+   // The second landmark is a different building, so wide windows do not show the cafe twice.
+   for(const [i,h] of [hx,hx+1180].entries()){
+    if(i){rect(c,h-40,354,200,6,p.trim);rect(c,h-40,360,200,2,p.near);heroScrapB(c,h,p,r,354);continue;}
     wreck(c,h-78,201,309,153,p,r,true);rect(c,h-82,354,325,6,p.trim);rect(c,h-82,360,325,2,p.near);
     // Broken arc of an old engine behind the salvagers' walkway.
     c.strokeStyle=p.trim;c.lineWidth=5;c.beginPath();c.arc(h+80,245,78,Math.PI*1.13,Math.PI*1.87);c.stroke();
@@ -289,7 +306,8 @@ function specializedLayer(p,depth,width){
   if(depth===0){
    for(let x=70;x<TILE;x+=520){rect(c,x-15,281,200,6,p.far);for(let k=0;k<5;k++){const xx=x+k*32,hh=18+r()*22;rect(c,xx,282-hh,27,hh,'#164653');ellipse(c,xx+13,282-hh,13,10,'#256274');c.save();c.globalAlpha=.25;for(let z=0;z<3;z++)rect(c,xx+5+z*7,279-hh,2,hh-4,p.accent);c.restore();}}
   }else if(depth===1){
-   for(const h of [hx,hx+1180]){
+   for(const [i,h] of [hx,hx+1180].entries()){
+    if(i){rect(c,h-60,324,240,10,p.trim);rect(c,h-58,331,236,5,p.near);for(let k=0;k<4;k++)rect(c,h-40+k*62,336,6,37,p.near);heroWaterB(c,h,p,r,324);continue;}
     // Floating habitat and a recognizable striped lighthouse.
     rect(c,h-90,324,309,10,p.trim);rect(c,h-88,331,305,5,p.near);
     for(let k=0;k<5;k++){rect(c,h-60+k*58,336,6,37,p.near);rect(c,h-62+k*58,362,10,3,p.trim);}

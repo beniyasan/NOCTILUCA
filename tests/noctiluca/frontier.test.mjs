@@ -15,7 +15,7 @@ test('client and server agree on nine planets, the outer three after Night Relay
  assert.deepEqual(worlds.map(w=>w.id),WORLDS.map(w=>w.id));
  assert.deepEqual(worlds.slice(6).map(w=>w.id),NEW);
  for(const w of worlds){
-  assert.equal(DISTRICTS[w.id].length,w.id==='kowloon'?8:4,w.id);assert.deepEqual([...ROUTES[w.id]].sort(),[0,1,2,3],w.id);
+  assert.equal(DISTRICTS[w.id].length,['kowloon','scrap','pelagic'].includes(w.id)?8:4,w.id);assert.deepEqual([...ROUTES[w.id]].sort(),[0,1,2,3],w.id);
   assert.ok(LIFE[w.kind]?.stationEn,w.kind);assert.equal(w.conditions.length,3);assert.equal(w.chord.length,4);
  }
  for(const kind of FRONTIER_KINDS)assert.ok(PAINTERS[kind],'painter registered for '+kind);
