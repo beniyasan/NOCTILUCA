@@ -25,6 +25,11 @@ test('first visit: opening, then a welcome card that waits for a name; the intro
  assert.match(engine,/endOpening\(immediate=false\)\{if\(state\.stop\.phase!=='cruise'\)return;state\.stop=immediate\?\{phase:'stop',t:0,held:true\}:\{phase:'arrive',t:0,held:true\}/);
  assert.doesNotMatch(engine.slice(engine.indexOf('beginOpening()'),engine.indexOf('endOpening(')),/notify\(/);
  assert.match(opening,/skip\?\.addEventListener\('click',\(\)=>finish\(true\)/);
+ // Reduced motion keeps the view still; keyboard shortcuts cannot move the train mid-opening; Esc skips.
+ assert.match(engine,/beginOpening\(\)\{if\(reducedMotion\)\{state\.stop=\{phase:'stop',t:0,held:true\};updateUI\(true\);return;\}/);
+ const talk=await readFile('src/client/talk.js','utf8');
+ for(const src of [engine,talk])assert.match(src,/document\.body\.classList\.contains\('opening-on'\)/);
+ assert.match(opening,/if\(e\.key==='Escape'\)\{e\.preventDefault\(\);finish\(true\);\}/);
  assert.match(engine,/startMoving\(\)\{\n  const s=gateway\.snapshot\.state;if\(!s\.displayName\|\|/);
  // The intro is only started where the server accepts it, never over a timer or before the welcome.
  assert.match(story,/!engine\?\.timer\?\.active&&!engine\?\.welcomePending&&introPlace\(s\)&&!document\.querySelector\('dialog\[open\]'\)/);

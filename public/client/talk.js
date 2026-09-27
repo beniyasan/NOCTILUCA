@@ -123,7 +123,7 @@ export function createTalk(engine,g,catalog){
   $('chat-enabled').addEventListener('change',e=>{clearAir();g.send('settings.set',{chatter:e.target.checked}).catch(e=>engine.toast(e.message));});
   $('chat-frequency').addEventListener('change',e=>g.send('settings.set',{frequency:e.target.value}).catch(e=>engine.toast(e.message)));
   document.addEventListener('keydown',e=>{
-   if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||document.querySelector('dialog[open]')||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+   if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||document.body.classList.contains('opening-on')||document.querySelector('dialog[open]')||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
    const key=e.key.toLowerCase();
    if(ui.view){
     if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();return;}

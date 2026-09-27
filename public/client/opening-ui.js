@@ -18,8 +18,10 @@ export function playOpening(engine){
   const timers=[];let finished=false;
   const finish=immediate=>{
    if(finished)return;finished=true;timers.forEach(clearTimeout);
-   engine.endOpening?.(immediate);box.hidden=true;document.body.classList.remove('opening-on');line.classList.remove('show');resolve();
+   document.removeEventListener('keydown',onKey,true);engine.endOpening?.(immediate);box.hidden=true;document.body.classList.remove('opening-on');line.classList.remove('show');resolve();
   };
+  // While it plays the journey shortcuts are off (see engine/talk); Esc skips it.
+  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();finish(true);}};document.addEventListener('keydown',onKey,true);
   engine.beginOpening?.();box.hidden=false;document.body.classList.add('opening-on');skip?.focus({preventScroll:true});
   skip?.addEventListener('click',()=>finish(true),{once:true});
   OPENING_LINES.forEach((text,i)=>{
