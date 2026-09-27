@@ -5,6 +5,11 @@ export function createTimerUI(engine,gateway){
  const $=id=>document.getElementById(id),clock=createFocusClock();
  let showReady=false,busy=false,error='',target=null,epoch=0,originalTitle=document.title;
  let quickGoalDraft=null,durationDraft=null,settingsReturnToQuick=false;
+ // On phones the window timer starts folded to one translucent line so it does not cover the
+ // passengers; the choice is remembered on this device. Wider screens ignore it (CSS).
+ const COLLAPSE_KEY='noctiluca.timerOverlay.collapsed';let collapsed=true;
+ try{const saved=localStorage.getItem(COLLAPSE_KEY);if(saved!==null)collapsed=saved==='1';}catch{/* default: folded */}
+ function setCollapsed(value){collapsed=value;try{localStorage.setItem(COLLAPSE_KEY,value?'1':'0');}catch{/* per-visit only */}paint();}
  const tasks=createTimerTasksUI(gateway,()=>clock.view.active,task=>engine.journal?.recordTask(task.text));
  const prefs=()=>gateway.snapshot?.state?.settings||{};
  const state=()=>gateway.snapshot?.state||{};
@@ -63,6 +68,7 @@ export function createTimerUI(engine,gateway){
   setText('timer-start-reason',reason);setHidden('timer-start-reason',!reason||v.active);
   const goal=v.active?(p.focusGoal||''):(quickGoalDraft??(p.focusGoal||''));for(const id of ['timer-goal-display','timer-overlay-goal']){setText(id,goal?'目標 · '+goal:'');setHidden(id,!goal);}setText('timer-count','このタブで '+v.completed+' 回完了');
   setHidden('timer-start',v.active);setHidden('timer-pause',!v.active);setHidden('timer-stop',!v.active);setText('timer-pause',error?'再試行':v.paused?'再開する':'一時停止');setDisabled('timer-start',busy||!!reason);setDisabled('timer-pause',busy);setDisabled('timer-stop',busy);setHidden('timer-goal-save',!v.active);setDisabled('timer-goal-save',busy);setDisabled('timer-save',busy);
+  const overlay=$('timer-overlay'),fold=$('timer-overlay-toggle');if(overlay)overlay.dataset.collapsed=String(collapsed);if(fold){fold.setAttribute('aria-expanded',String(!collapsed));fold.setAttribute('aria-label',collapsed?'タイマーを広げる':'タイマーを小さくする');fold.textContent=collapsed?'＋':'－';}
   const journey=engine.travelTimer,custom=p.travelSeconds!==null;tasks.render();setHidden('timer-overlay',!(v.active||custom||showReady));
   const overlayPhase=v.active?(v.waiting?(error?'確認が必要です':'到着・発車を確認中'):label+(v.paused?' · 一時停止':'')):custom?(journey.active?(engine.state.paused?'次の駅まで · 一時停止':'次の駅まで'):'発車待ち'):'作業タイマー · 開始待ち';setText('timer-overlay-phase',overlayPhase);setText('timer-overlay-time',formatTime(v.active?v.seconds:custom?(journey.active?journey.seconds:p.travelSeconds):p.focusSeconds));setText('timer-overlay-foot',v.active?(v.waiting?'':'次は '+nextPhase(v,p)+' · ')+v.completed+' 回完了':'押して集中を始める');
   const overlayReason=v.active&&blockedReason({includeStation:false})&&!v.waiting?blockedReason({includeStation:false}):(v.waiting&&error?error:'');setText('timer-overlay-message',overlayReason);setHidden('timer-overlay-message',!overlayReason);setHidden('timer-overlay-pause',!v.active);setHidden('timer-overlay-stop',!v.active);setText('timer-overlay-pause',error?'再試行':v.waiting?'到着を確認':v.paused?'再開する':'一時停止');setDisabled('timer-overlay-pause',busy);setDisabled('timer-overlay-stop',busy);
@@ -93,6 +99,7 @@ export function createTimerUI(engine,gateway){
  function closeSettings(){const returnToQuick=settingsReturnToQuick;settingsReturnToQuick=false;close('timer-settings-dialog');if(returnToQuick)openQuick();}
  const quickForm=$('timer-quick-form'),start=$('timer-start');quickForm?.addEventListener('submit',startFromQuick);if(start&&(!quickForm||start.form!==quickForm))start.addEventListener('click',startFromQuick);
  $('timer-pause')?.addEventListener('click',toggle);$('timer-stop')?.addEventListener('click',stop);$('timer-overlay-pause')?.addEventListener('click',toggle);$('timer-overlay-stop')?.addEventListener('click',stop);$('timer-form')?.addEventListener('submit',submitSettings);$('timer-goal-save')?.addEventListener('click',saveGoal);$('timer-goal')?.addEventListener('input',()=>{quickGoalDraft=$('timer-goal').value;paint();});$('timer-standard')?.addEventListener('change',standard);$('bell-volume')?.addEventListener('input',()=>setText('bell-level',$('bell-volume').value+'%'));$('bell-test')?.addEventListener('click',async()=>{const ok=await engine.bell.test(numberValue('bell-volume'));const text=ok?'到着ベルの試聴です。':'音を開始できませんでした。ブラウザの音声設定を確認してください。';message(text);detailsMessage(text);});
+ $('timer-overlay-toggle')?.addEventListener('click',()=>setCollapsed(!collapsed));
  $('timer-open')?.addEventListener('click',openQuick);$('timer-overlay-open')?.addEventListener('click',openQuick);$('route-timer-open')?.addEventListener('click',openQuick);$('timer-settings-open')?.addEventListener('click',()=>openSettings(true));$('timer-close')?.addEventListener('click',()=>{quickGoalDraft=null;durationDraft=null;close('timer-dialog');paint();});$('timer-dialog')?.addEventListener('cancel',()=>{quickGoalDraft=null;durationDraft=null;});
  for(const id of ['quick-focus','quick-break'])$(id)?.addEventListener('input',editDurations);for(const b of document.querySelectorAll('.timer-presets button'))b.addEventListener('click',()=>pickPreset(b));$('timer-settings-close')?.addEventListener('click',closeSettings);$('timer-settings-dialog')?.addEventListener('cancel',event=>{event.preventDefault();closeSettings();});
  const timer={get active(){return clock.view.active;},get view(){return clock.view;},toggle,stop,paint};engine.timer=timer;
