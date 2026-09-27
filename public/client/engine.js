@@ -398,6 +398,11 @@ const engine={
   state.travel=3.8*state.speed;arrivalNotice();render(0);updateUI(true);
  },
  setHeld(){state.stop.held=true;},
+ // First-visit opening: the view rolls toward the Kowloon platform while the lines play, then
+ // pulls in and stays (the first page of the notebook opens there). Visual only: the saved
+ // journey is already at this station, so nothing is sent.
+ beginOpening(){state.stop={phase:'cruise',t:0,held:false};state.paused=false;state.elapsed=0;legActive=false;syncPause();updateUI(true);},
+ endOpening(immediate=false){if(state.stop.phase!=='cruise')return;state.stop=immediate?{phase:'stop',t:0,held:true}:{phase:'arrive',t:0,held:true};updateUI(true);},
  // Leave the platform right away (the welcome card shows a journey under way, not a wait).
  startMoving(){
   const s=gateway.snapshot.state;if(!s.displayName||s.narrative?.active||s.location.mode==='station'||s.suspended||gateway.blocked||!['stop','arrive'].includes(state.stop.phase))return;

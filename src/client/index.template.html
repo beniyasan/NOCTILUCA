@@ -40,6 +40,7 @@
         <div class="world-caption" id="weather-label">NEON RAIN / LOCAL 02:17</div>
       </div>
       
+      <div class="opening" id="opening" hidden><p id="opening-line" class="opening-line" aria-live="polite"></p><button type="button" id="opening-skip" class="opening-skip">スキップ ›</button></div>
       <section class="window-timer" id="timer-overlay" aria-label="タイマーとタスク" hidden>
       <button type="button" class="window-timer-toggle" id="timer-overlay-toggle" aria-expanded="false" aria-controls="timer-overlay" aria-label="タイマーを広げる">＋</button>
       <button type="button" class="window-timer-open" id="timer-overlay-open" aria-haspopup="dialog" aria-describedby="timer-overlay-phase timer-overlay-time timer-overlay-goal" aria-label="タイマーの設定と操作を開く">
@@ -97,7 +98,7 @@
       <button class="control station-control" id="station-action" aria-pressed="false" title="列車だけ停めてホームを眺める (S)"><svg><use href="#i-train"/></svg><span id="station-action-label">駅で過ごす</span></button>
       <button class="control map" id="open-map" aria-haspopup="dialog"><svg><use href="#i-map"/></svg><span>路線図</span></button>
     </div><div class="control-hint"><kbd>T</kbd> 駅で話す　 <kbd>N</kbd> 手帳　 <kbd>H</kbd> 車窓だけ</div></div>
-    <div class="ledger-actions" aria-label="商売と寄り道"><button id="commerce-open" class="trade-wallet-button" aria-haspopup="dialog">商売帳 <span id="commerce-wallet">120 cr · 荷物 0 / 1</span></button><button id="sidequests-open" class="subtle-button" aria-haspopup="dialog">寄り道の依頼帳</button></div><button id="relay-open" class="subtle-button" aria-haspopup="dialog" hidden>保守端末を調べる</button><p id="chapter-two-observation" class="chapter-two-observation" hidden></p><div class="story-guidance"><p id="story-hint"></p><button id="story-open" class="subtle-button" hidden>最初の帳面を開く</button></div>
+    <div class="ledger-actions" aria-label="商売と寄り道"><button id="commerce-open" class="trade-wallet-button" aria-haspopup="dialog">商売帳 <span id="commerce-wallet">120 cr · 荷物 0 / 1</span></button><button id="sidequests-open" class="subtle-button" aria-haspopup="dialog">寄り道の依頼帳</button></div><button id="relay-open" class="subtle-button" aria-haspopup="dialog" hidden>保守端末を調べる</button><p id="chapter-two-observation" class="chapter-two-observation" hidden></p><div class="story-guidance"><div id="story-steps" class="story-steps" hidden><p class="story-steps-title">第一章　ひと箱の灯り</p><ol id="story-steps-list"></ol></div><p id="story-hint"></p><button id="story-open" class="subtle-button" hidden>最初の帳面を開く</button></div>
     <div class="credits">SOMEWHERE, LIFE GOES ON. / 次の便で</div>
   </footer>
   <div class="sound-volume" id="sound-volume" hidden><label for="volume">環境音</label><input type="range" id="volume" min="0" max="100" value="35" aria-label="環境音の音量"><span id="volume-value" style="font-size:10px;color:#91b1bc">35%</span></div>
