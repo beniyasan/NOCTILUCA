@@ -68,7 +68,7 @@ export function createJournalUI(gateway){
   finally{busy=organizing=false;paint();}
  }
  function applyAi(append){
-  const text=$('journal-ai-text').value.trim(),memo=$('journal-body').value.trim();if(!text)return;
+  const text=$('journal-ai-text').value.trim(),memo=$('journal-body').value.trim();if(!text||aiResult?.day!==viewing)return;
   const body=append&&memo?memo+'\n\n'+text:text;
   if([...body].length>4000){message('メモは4000文字までです。追記せずに置き換えるか、内容を短くしてください。');return;}
   if(!append&&memo&&!window.confirm('今のメモを、整理した内容で置き換えますか？'))return;
@@ -89,7 +89,7 @@ export function createJournalUI(gateway){
   $('journal-delete-day').hidden=!page||(!page.entries.length&&!page.body);
   if(signedIn()){paintDay();paintList();paintAi();}
  }
- async function openDay(day){await run(async()=>{const r=await gateway.journalDay(day);today=r.today;viewing=r.journal.day;page=r.journal;ai=r.ai||null;editing=null;$('journal-body').value=page.body;setTab(false);});}
+ async function openDay(day){await run(async()=>{const r=await gateway.journalDay(day);today=r.today;viewing=r.journal.day;page=r.journal;ai=r.ai||null;aiResult=null;editing=null;$('journal-body').value=page.body;setTab(false);});}
  async function loadList(append=false){await run(async()=>{const r=await gateway.journalDays(append?days.at(-1)?.day:undefined);today=r.today;days=append?days.concat(r.days):r.days;more=r.more;loadedList=true;});}
  async function open(){message('');paint();if(!dialog.open)dialog.showModal();if(signedIn()){setTab(false);await openDay();}}
  async function download(){
@@ -107,8 +107,8 @@ export function createJournalUI(gateway){
  $('journal-today')?.addEventListener('click',()=>void openDay());
  $('journal-more')?.addEventListener('click',()=>void loadList(true));
  $('journal-body-form')?.addEventListener('submit',e=>{e.preventDefault();void run(async()=>{const r=await gateway.journalSend({action:'body',day:viewing,body:$('journal-body').value});page=r.journal;},'メモを保存しました。');});
- $('journal-delete-day')?.addEventListener('click',()=>{if(!window.confirm(dayLabel(viewing)+'の日誌を削除しますか？元に戻せません。'))return;void run(async()=>{const r=await gateway.journalSend({action:'delete-day',day:viewing});page=r.journal;$('journal-body').value='';loadedList=false;},'この日の日誌を削除しました。');});
- $('journal-delete-all')?.addEventListener('click',()=>{if(!window.confirm('すべての作業日誌を削除しますか？元に戻せません。'))return;void run(async()=>{await gateway.journalSend({action:'delete-all'});days=[];more=false;page={day:viewing,body:'',entries:[]};$('journal-body').value='';},'すべての日誌を削除しました。');});
+ $('journal-delete-day')?.addEventListener('click',()=>{if(!window.confirm(dayLabel(viewing)+'の日誌を削除しますか？元に戻せません。'))return;void run(async()=>{const r=await gateway.journalSend({action:'delete-day',day:viewing});page=r.journal;$('journal-body').value='';loadedList=false;aiResult=null;},'この日の日誌を削除しました。');});
+ $('journal-delete-all')?.addEventListener('click',()=>{if(!window.confirm('すべての作業日誌を削除しますか？元に戻せません。'))return;void run(async()=>{await gateway.journalSend({action:'delete-all'});days=[];more=false;page={day:viewing,body:'',entries:[]};$('journal-body').value='';aiResult=null;},'すべての日誌を削除しました。');});
  $('journal-export')?.addEventListener('click',()=>void download());
  $('journal-ai-run')?.addEventListener('click',()=>void organize());
  $('journal-ai-append')?.addEventListener('click',()=>applyAi(true));
