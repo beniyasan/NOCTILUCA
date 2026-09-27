@@ -122,6 +122,13 @@
     <div class="timer-quick-fields"><label>作業 <span><input type="number" id="quick-focus" min="1" max="1440" step="1" value="25" required> 分</span></label><label>休憩 <span><input type="number" id="quick-break" min="1" max="1440" step="1" value="5" required> 分</span></label></div>
    </fieldset>
    <div class="timer-goal-field"><label for="timer-goal">この時間にやりたいこと</label><input id="timer-goal" type="text" maxlength="120" autocomplete="off" placeholder="例：資料の構成を3つ書き出す" aria-describedby="timer-goal-help"><p id="timer-goal-help" class="timer-help">任意・120文字まで。空欄のままでも始められます。</p></div>
+   <div class="timer-quick-tasks" id="timer-quick-tasks">
+    <label for="timer-quick-task-input">タスク</label>
+    <ul id="timer-quick-task-list" aria-label="未完了のタスク"></ul>
+    <div class="timer-task-entry"><input id="timer-quick-task-input" type="text" maxlength="120" autocomplete="off" placeholder="例：見出しを3つ書く" aria-describedby="timer-quick-task-help"><button type="button" id="timer-quick-task-add">追加</button></div>
+    <p id="timer-quick-task-help" class="timer-help">任意・20件まで。Enterでも追加できます。完了にするのは、始めたあと車窓のタイマーから。</p>
+    <p id="timer-quick-task-message" class="timer-status" role="status"></p>
+   </div>
    <p id="timer-start-reason" class="timer-status" role="status" hidden></p>
    <div class="timer-actions"><button type="submit" id="timer-start" aria-describedby="timer-start-reason">25分の集中を始める</button><button type="button" id="timer-goal-save" hidden>目標を保存</button><button type="button" id="timer-pause" hidden>一時停止</button><button type="button" id="timer-stop" hidden>終了して旅に戻る</button></div>
   </form>
