@@ -141,6 +141,21 @@
     <ol id="journal-entries" class="journal-entries" aria-label="この日の記録"></ol>
     <p id="journal-empty" class="journal-empty">集中タイマーで作業を終えたり、タスクを完了したりすると、ここに記録されます。</p>
     <form id="journal-body-form" class="journal-body"><label for="journal-body">メモ</label><textarea id="journal-body" maxlength="4000" rows="6" placeholder="気づいたこと、明日やること など"></textarea><div class="journal-actions"><button type="submit" id="journal-body-save">メモを保存</button><button type="button" id="journal-delete-day" class="journal-danger">この日の日誌を削除</button></div></form>
+    <section id="journal-ai" class="journal-ai" aria-labelledby="journal-ai-title" hidden>
+     <h4 id="journal-ai-title">AIで整理</h4>
+     <div class="journal-levels" role="radiogroup" aria-label="AIに任せる範囲">
+      <label><input type="radio" name="journal-level" value="polish"><span><strong>整える</strong><small>メモの誤字や文のつながりだけを直す</small></span></label>
+      <label><input type="radio" name="journal-level" value="organize" checked><span><strong>整理する</strong><small>やったこと／詰まったこと／次にやることに分ける</small></span></label>
+      <label><input type="radio" name="journal-level" value="reflect"><span><strong>ふりかえる</strong><small>整理したうえで、気づきと明日へのひとことを添える</small></span></label>
+     </div>
+     <p id="journal-ai-help" class="timer-help">押すと、この日の日誌（目標・ひとこと・完了したタスク・メモ）を OpenAI に送って整理します。旅の名前やメールアドレスは送りません。結果はメモに入れるまで保存されません。</p>
+     <div class="journal-ai-run"><button type="button" id="journal-ai-run">この日を整理する</button><span id="journal-ai-remaining" class="journal-stats"></span></div>
+     <div id="journal-ai-result" class="journal-ai-result" hidden>
+      <label for="journal-ai-text">整理した内容（直してから使えます）</label>
+      <textarea id="journal-ai-text" rows="9" maxlength="4000"></textarea>
+      <div class="journal-actions"><button type="button" id="journal-ai-append">メモに追記して保存</button><button type="button" id="journal-ai-replace">メモを置き換えて保存</button><button type="button" id="journal-ai-discard" class="journal-link">使わない</button></div>
+     </div>
+    </section>
    </section>
    <section id="journal-list" role="tabpanel" aria-labelledby="journal-tab-list" hidden>
     <ul id="journal-days" class="journal-days" aria-label="日誌のある日"></ul>

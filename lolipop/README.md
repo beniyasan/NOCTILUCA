@@ -7,6 +7,7 @@
 - `dist-lolipop/`: ロリポップへアップロードする静的ファイル
 - `supabase/migrations/0001_lolipop_initial.sql`: 専用PostgreSQLスキーマ
 - `supabase/migrations/0004_work_journals.sql`: 作業日誌
+- `supabase/migrations/0005_journal_ai_runs.sql`: 作業日誌のAI整理の利用回数
 - `supabase/functions/api/`: JWT検証、ゲームルール、保存API
 - `scripts/sync-lolipop.mjs`: ゲームルールとコンテンツをEdge Functionへ同期
 - `scripts/build-lolipop.mjs`: 静的配信用ビルドを作成
@@ -63,6 +64,27 @@ supabase secrets set PASSENGER_TALK_MODEL="gpt-6-luna" PASSENGER_TALK_MAX_BATCHE
 ```sh
 supabase db push   # 0004_work_journals.sql を適用
 supabase functions deploy api --no-verify-jwt
+```
+
+### AIで整理
+
+日誌の画面から、その日の日誌をGPT-6 Lunaで整理できる。任せる範囲はプレイヤーが選ぶ。
+
+- 整える:メモの誤字や文のつながりだけを直す(メモだけを送る)。
+- 整理する:やったこと／詰まったこと／次にやることに分ける。
+- ふりかえる:整理に、気づきと明日へのひとことを添える。
+
+整理する・ふりかえるでは、作業の目標・ひとこと・完了したタスク・メモを送る(8000文字まで)。旅の名前やメールアドレスは送らない。結果は保存せずに編集欄へ出し、プレイヤーが「メモに追記」か「置き換え」を選んだときだけメモとして保存する。
+
+- 1プレイヤー1日(日本時間)3回まで。`journal_ai_runs` で数え、`claim_journal_ai_run` が上限を超えないよう1文で加算する。
+- 呼び出しに失敗した回は `release_journal_ai_run` で戻し、理由を `journal_ai_runs.last_error` に残す。
+- `OPENAI_API_KEY` が未設定なら整理の欄を表示しない。
+
+```sh
+supabase db push   # 0005_journal_ai_runs.sql を適用
+supabase functions deploy api --no-verify-jwt
+# 任意
+supabase secrets set JOURNAL_AI_MODEL="gpt-6-luna" JOURNAL_AI_DAILY_LIMIT="3"
 ```
 
 ## 静的ビルド

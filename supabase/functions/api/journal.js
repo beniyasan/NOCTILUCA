@@ -3,6 +3,7 @@
 // Database access lives in index.ts.
 import { GameError, fail, exactKeys } from './game/rules.js';
 import { jstDay } from './passenger-talk.js';
+import { JOURNAL_AI_LEVELS } from './journal-ai.js';
 
 export const JOURNAL_LIMITS = { body: 4000, note: 200, goal: 120, task: 120, entries: 80, listDays: 30 };
 const CONTROL = /[\u0000-\u0008\u000b-\u001f\u007f]/;
@@ -29,7 +30,7 @@ function text(value, max, { multiline = false, label }) {
 // One POST /journal body -> the change to make. Entries always land on today's page (JST);
 // notes and the memo may be edited on any day.
 export function journalCommand(input, { now = new Date(), id }) {
-  exactKeys(input, ['action', 'day', 'seconds', 'goal', 'text', 'entryId', 'note', 'body']);
+  exactKeys(input, ['action', 'day', 'seconds', 'goal', 'text', 'entryId', 'note', 'body', 'level']);
   const today = jstDay(now), at = now.toISOString();
   switch (input.action) {
     case 'session': {
@@ -51,6 +52,11 @@ export function journalCommand(input, { now = new Date(), id }) {
     case 'body': {
       exactKeys(input, ['action', 'day', 'body']);
       return { action: 'body', day: journalDay(input.day, now), body: text(input.body, JOURNAL_LIMITS.body, { multiline: true, label: 'メモ' }) };
+    }
+    case 'organize': {
+      exactKeys(input, ['action', 'day', 'level']);
+      if (!JOURNAL_AI_LEVELS.includes(input.level)) fail('BAD_INPUT', '整理の方法を選んでください。');
+      return { action: 'organize', day: journalDay(input.day, now), level: input.level };
     }
     case 'delete-day': {
       exactKeys(input, ['action', 'day']);
