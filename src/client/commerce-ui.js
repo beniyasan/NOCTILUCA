@@ -1,8 +1,7 @@
 import {createChapterFourUI} from './chapter-four-ui.js';
 import {createChapterThreeUI} from './chapter-three-ui.js';
 import {createChapterTwoUI} from './chapter-two-ui.js';
-const $=id=>document.getElementById(id);
-const node=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+import {$,node} from './dom.js';
 export function createCommerceUI(g,engine){
  const dialog=$('commerce-dialog'),body=$('commerce-body');let selection=null,busy=false,error='',notice='';
  const snapshot=()=>g.snapshot.state;

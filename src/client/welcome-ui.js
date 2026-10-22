@@ -4,7 +4,7 @@
 // A signed-in player without a name is asked for one first (the server accepts no
 // other command until then), so all of this waits for the name and that dialog.
 import {playOpening} from './opening-ui.js';
-const $=id=>document.getElementById(id);
+import {$} from './dom.js';
 const KEY='noctiluca.welcomed';
 
 export function createWelcomeUI(gateway,engine){

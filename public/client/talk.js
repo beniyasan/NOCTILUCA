@@ -1,6 +1,6 @@
 import {portraitSrc} from './portraits.js';
-const $=id=>document.getElementById(id);
-const el=(tag,cls='',text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+import {$,node} from './dom.js';
+const el=(tag,cls='',text)=>node(tag,cls,text);
 const button=(label,fn,cls='talk-choice')=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',fn);return b;};
 export function createTalk(engine,g,catalog){
  const {state,worlds}=engine;

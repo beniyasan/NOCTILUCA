@@ -1,5 +1,4 @@
-const $=id=>document.getElementById(id);
-const node=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+import {$,node} from './dom.js';
 export function createSidequestsUI(g,engine){
  const dialog=$('sidequests-dialog'),body=$('sidequests-body');let selection=null,busy=false,error='',notice='',response=[];
  const labels={available:'まだ聞いていない話',offered:'条件を聞いた',accepted:'引き受けた',carrying:'荷物を運んでいる',informed:'話を持ち帰る',completed:'仕事を終えた'};

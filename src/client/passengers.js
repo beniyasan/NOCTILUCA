@@ -7,12 +7,11 @@
 // groups play out a little scene (passenger-scenes.js), a drunk may stretch out
 // across the seat to sleep, and animals hop down to wander the floor. View-only:
 // nothing here is saved, sent to the server or counted as progress.
-import {mod} from './anim-utils.js';
+import {mod,pickOf} from './anim-utils.js';
 import {SPECIES,ANIMAL_POSES,CAST_POSES,ACTION_SECONDS,PACE,CAST_TALK,animalLook,drunkLook,maidLook,alienLook,monologue,createKindPainters} from './passenger-kinds.js';
 import {SCENES,SLEEP_TALK,FLOOR_POSES,conductorLook} from './passenger-scenes.js';
 
 // ---- conversation generator (pure) ----------------------------------------
-const pickOf=(r,a)=>a[Math.floor(r()*a.length)];
 const WORDS={
  food:['麺','肉まん','揚げパン','海藻スープ','焼き魚','蒸しパン','甘い団子','屋台のおでん'],
  thing:['傘','手袋','鍵','充電器','定期','マフラー','眼鏡','水筒'],

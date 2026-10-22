@@ -1,5 +1,5 @@
 import {createResetUI} from './reset-ui.js';
-const $=id=>document.getElementById(id);
+import {$} from './dom.js';
 export function createJourneyUI(g,engine){
  const account=$('account-dialog'),resume=$('resume-dialog');let uiBusy=false,lastProfileName=null;
  function message(text,error=false){$('account-message').textContent=text;$('account-message').classList.toggle('error',error);}
