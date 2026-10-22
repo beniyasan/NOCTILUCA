@@ -1,5 +1,4 @@
-const $=id=>document.getElementById(id);
-const node=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
+import {$,node} from './dom.js';
 export function createStoryUI(g,engine){
  const dialog=$('story-dialog');let busy=false,error='',attemptedIntro=false,lastPageKey='';
  async function run(fn){if(busy||g.busy||g.blocked)return;busy=true;error='';render();try{await fn();}catch(e){error=e.message;}finally{busy=false;render();}}

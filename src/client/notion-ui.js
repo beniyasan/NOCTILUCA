@@ -3,7 +3,7 @@
 // or disconnect. Only the Lolipop gateway has notion* methods; elsewhere the
 // entry stays hidden. Also keeps focus tasks in step with the chosen database:
 // picking open Notion tasks, sending tasks added here, and marking them done there.
-const $=id=>document.getElementById(id);
+import {$} from './dom.js';
 const RETURNS={
  connected:'Notionと連携しました。使うデータベースと、完了を表す列を選んでください。',
  denied:'Notionでの許可がキャンセルされました。',

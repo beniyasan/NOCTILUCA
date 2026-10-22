@@ -5,9 +5,8 @@
 // order: `on` starts something, `tick` animates, `line` is said by a member
 // index (or 'staff'), and a step lasts `d` seconds (or until its line is read)
 // and then until `until()` holds. View-only: nothing is saved or counted.
-import {mod} from './anim-utils.js';
+import {mod,pickOf} from './anim-utils.js';
 
-const pickOf=(r,a)=>a[Math.floor(r()*a.length)];
 const say=(who,text)=>{const mark=text[0]==='!'||text[0]==='~'?text[0]:'';return {who,text:mark?text.slice(1):text,mark};};
 
 // The conductor who comes down the carriage to stop a fight.

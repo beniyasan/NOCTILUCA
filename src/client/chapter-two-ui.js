@@ -1,4 +1,4 @@
-const node=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+import {node} from './dom.js';
 export function createChapterTwoUI(send,refresh){
  let selection=null;
  return {reset(){selection=null;},render(s,body,blocked,here){

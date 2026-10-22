@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id);
+import {$} from './dom.js';
 export function createTimerTasksUI(g,active,onComplete,notion=()=>null){
  const list=$('timer-task-list'),input=$('timer-task-input'),composer=$('timer-task-composer'),toggle=$('timer-task-toggle');let busy=false,last='',lastQuick='',editingPlayer=g.snapshot.playerId,messageExpiresAt=0;
  // The focus dialog can add tasks before the timer starts; completing them stays with the running timer.

@@ -2,7 +2,7 @@
 // runs in toward Kowloon, pulling in as the last line shows. About sixteen
 // seconds, skippable, no clicks needed. It fills in who you are and what the
 // work is, so the notebook's first pages can go straight to the people.
-const $=id=>document.getElementById(id);
+import {$} from './dom.js';
 export const OPENING_LINES=[
  '外縁環状線。九つの星を、夜行列車がめぐっている。',
  '街にはそれぞれの暮らしと、少しずつ足りないものがある。',

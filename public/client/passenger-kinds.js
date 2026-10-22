@@ -2,9 +2,8 @@
 // a cat-eared robot maid, visitors from off-world, and animals riding on their
 // own. Animals never talk; they have a wider repertoire of movements instead.
 // Lines, looks and pixel painters only; passengers.js decides who boards.
-import {mod} from './anim-utils.js';
+import {mod,pickOf} from './anim-utils.js';
 
-const pickOf=(r,a)=>a[Math.floor(r()*a.length)];
 
 // ---- who they are ----------------------------------------------------------
 export const SPECIES=['cat','dog','weasel','rabbit'];

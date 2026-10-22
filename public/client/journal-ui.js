@@ -1,8 +1,8 @@
 import {formatTime} from './focus-clock.js';
+import {$} from './dom.js';
 
 // Work journal: one page per day (JST), kept by the server apart from the journey save.
 // Only the Lolipop gateway provides journal* methods; elsewhere the button stays hidden.
-const $=id=>document.getElementById(id);
 const clockTime=iso=>new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
 const dayLabel=day=>{const [y,m,d]=day.split('-').map(Number),w='日月火水木金土'[new Date(Date.UTC(y,m-1,d)).getUTCDay()];return y+'年'+m+'月'+d+'日（'+w+'）';};
 export function duration(seconds){const h=Math.floor(seconds/3600),m=Math.round(seconds%3600/60);return h?h+'時間'+(m?m+'分':''):seconds<60?seconds+'秒':m+'分';}

@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id);
+import {$} from './dom.js';
 export function createResetUI(g,engine,{message}){
  const dialog=$('reset-dialog'),consent=$('reset-consent');let busy=false,review=null;
  const available=()=>g.authenticated&&!g.busy&&!g.blocked&&!busy&&!engine.state.transition;
